@@ -7,6 +7,7 @@ services:
     container_name: nginx
     build: ./backend/webserver
     restart: on-failure:3
+    env_file: .env #IP whitelist
     environment:
       - domain=trans.ella-peeters.me
     depends_on:
@@ -20,33 +21,21 @@ services:
       - /etc/ssl/trans_ella-peeters_me:/etc/ssl/trans_ella-peeters_me:ro #Mount SSL certificate
       - /home/lpeeters/.ssh/ella-peeters.me.key:/etc/ssh/ella-peeters.me.key:ro #Mount SSH key
       - ./backend/webserver/nginx.conf:/etc/nginx/nginx.conf:ro #Mount Nginx configuration
+      - ./backend/webserver/ip_whitelist.js:/etc/nginx/ip_whitelist.js:ro #Mount IP whitelist fetching
+      - ./frontend/test_environment/safe.html:/var/www/html/test_environment/safe.html:ro #Served statically for testing
 
-  # Frontend and backend
+  # Backend
   server:
     container_name: server
     build: ./backend/server
     restart: on-failure:3
-    #env_file: .env #Users and passwords
     environment:
       - domain=trans.ella-peeters.me
-    #depends_on:
-      #- sqlite
     networks:
       - frontend #Connects to Nginx
-      #- backend #Connects to SQLite
     volumes:
       - ./backend/server/test.js:/var/www/js/test.js:ro
 
-  # Backend database
-  #sqlite:
-    #container_name: sqlite
-    #build: ./sqlite
-    #restart: on-failure:3
-    #env_file: .env #Users and passwords
-    #networks:
-      #- backend #Connects to server
-
-# Split frontend and backend
+# Network for frontend
 networks:
   frontend:
-  #backend:
