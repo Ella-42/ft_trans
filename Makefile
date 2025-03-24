@@ -6,7 +6,7 @@
 #    By: lpeeters <lpeeters@student.s19.be>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/04 21:07:01 by lpeeters          #+#    #+#              #
-#    Updated: 2025/03/04 21:19:39 by lpeeters         ###   ########.fr        #
+#    Updated: 2025/03/24 13:34:26 by lpeeters         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -49,7 +49,7 @@ clean:
 	 docker network rm $$(docker network ls -q) $(silent) || true
 
 # Restart the Docker stack
-re: down up
+re: down clean up
 
 # Targets
 .PHONY: up down status nginx server logs clean re
