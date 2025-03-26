@@ -6,7 +6,8 @@ function check_ip(r)
 	[
 		process.env.SCHOOL_ETHERNET,
 		process.env.SCHOOL_WIFI,
-		process.env.ELLA
+		process.env.ELLA,
+		process.env.PCLAUS,
 	]
 
 	// Check if client's IP is within the whitelist, block if not
