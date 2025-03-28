@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management</title>
+    <script>
+        async function loadUsers() {
+            const res = await fetch('/api/users');
+            const users = await res.json();
+            const list = document.getElementById('users');
+            list.innerHTML = users.map(user => 
+                `<li>${user.id} - ${user.nickname} - ${user.email} 
+                    <button onclick="deleteUser(${user.id})">Delete</button>
+                </li>`
+            ).join('');
+        }
+
+        async function addUser() {
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            await fetch('/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password })
+            });
+
+            loadUsers();
+        }
+        async function updateUser() {
+            const name = document.getElementById('newname').value;
+            const email = document.getElementById('newemail').value;
+            const password = document.getElementById('newpassword').value;
+            const id = document.getElementById('id').value;
+
+            if (!id) {
+                alert("User ID is required to update a user!");
+                return;
+            }
+            const res = await fetch(`/api/users/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password })
+            });
+
+            loadUsers();
+            if (!res.ok) {
+                alert("Error updating user");
+            }
+        }
+
+        async function deleteUser(id) {
+            await fetch(`/api/users/${id}`, { method: 'DELETE' });
+            loadUsers();
+        }
+
+        window.onload = loadUsers;
+    </script>
+</head>
+<body>
+    <h1>User Management</h1>
+    <ul id="users"></ul>
+    
+    <h2>Add User</h2>
+    <input type="text" id="name" placeholder="Name">
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="addUser()">Add</button>
+
+    <h2>Update User</h2>
+    <input type="text" id="id" placeholder="ID">
+    <input type="text" id="newname" placeholder="Name">
+    <input type="email" id="newemail" placeholder="Email">
+    <input type="password" id="newpassword" placeholder="Password">
+    <button onclick="updateUser()">Update</button>
+</body>
+</html>
+

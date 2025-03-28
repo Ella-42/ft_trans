@@ -27,15 +27,43 @@ services:
   # Backend
   server:
     container_name: server
-    build: ./backend/server
+    build:
+      context: .
+      dockerfile: backend/server/Dockerfile
     restart: on-failure:3
     environment:
       - domain=trans.ella-peeters.me
     networks:
       - frontend #Connects to Nginx
     volumes:
+      - db-volume:/var/www/db
       - ./backend/server/test.js:/var/www/js/test.js:ro
+
+  # Purely for testing
+  frontend-dummy:
+    build:
+      context: .
+      dockerfile: ./dummy/Dockerfile
+    container_name: frontend_dummy
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dummy/src/index.html:/var/www/dummy/index.html:ro
+      - ./dummy/src/server.js:/var/www/dummy/server.js:ro
+    networks:
+      - frontend
+    restart: always
+
+volumes:
+  db-volume:
+    name: sqlite
+    driver_opts:
+      o: bind
+      type: none
+      device: ./data/sqlite
 
 # Network for frontend
 networks:
   frontend:
+    name: frontend
+    driver: bridge
