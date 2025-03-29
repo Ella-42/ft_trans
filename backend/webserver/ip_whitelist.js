@@ -13,7 +13,7 @@ function check_ip(r)
 	// Check if client's IP is within the whitelist, block if not
 	if (!whitelist.includes(r.remoteAddress))
 		return r.return(403);
-	r.internalRedirect("/test_environment/");
+	r.internalRedirect("/test_environment/" + r.uri.slice(5));
 	// Otherwise, redirect to the internally served testing environment
 }
 
