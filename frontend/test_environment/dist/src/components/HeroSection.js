@@ -9,7 +9,7 @@ export function renderHeroSection() {
 					<p class="leading-loose font-roboto text-lg mb-8">The classic Pong game you know and love — now with the power to challenge friends or players from around the world. Paddle up and show them who's boss!</p>
 					<div class="flex flex-row gap-5":>
 						<div>
-							<button type="button" class="text-xl md:text-base text-white bg-primary my-3 py-3 px-6 rounded-md flex items-center whitespace-nowrap hover:text-primary hover:bg-white">
+							<button id="loginButton" type="button" class="text-xl md:text-base text-white bg-primary my-3 py-3 px-6 rounded-md flex items-center whitespace-nowrap hover:text-primary hover:bg-white">
 							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-2">
   <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15M12 9l3 3m0 0-3 3m3-3H2.25" />
 							</svg>
