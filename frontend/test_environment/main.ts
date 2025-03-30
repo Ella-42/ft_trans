@@ -1,6 +1,4 @@
-import './style.css'
-
-import { router, navigateTo } from './router'
+import { router, navigateTo } from './router.js'
 
 document.addEventListener("DOMContentLoaded", () => {
 

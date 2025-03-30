@@ -17,7 +17,7 @@ module.exports = {
 				500: '500px'
 			},
 			backgroundImage: {
-        		'hero-pattern': "url('/public/Group3.svg')",
+        		'hero-pattern': "url('../public/Group3.svg')",
       		},
 			dropShadow: {
 				//'purple-ds': '0 4px 30px rgba(109,67,255,100)',

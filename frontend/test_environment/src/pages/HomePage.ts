@@ -1,7 +1,7 @@
-import { renderNavBar } from '../components/NavBar'
-import { renderHeroSection } from '../components/HeroSection'
-import { renderFeaturesSection } from '../components/Features'
-import { renderFooter } from '../components/Footer'
+import { renderNavBar } from '../components/NavBar.js'
+import { renderHeroSection } from '../components/HeroSection.js'
+import { renderFeaturesSection } from '../components/Features.js'
+import { renderFooter } from '../components/Footer.js'
 
 export function renderHomePage(): string {
 

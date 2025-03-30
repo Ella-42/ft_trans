@@ -1,8 +1,8 @@
-import { renderHomePage } from "./src/pages/HomePage";
-import { renderCookiePolicy } from "./src/pages/CookiePolicy";
+import { renderHomePage } from "./src/pages/HomePage.js";
+import { renderCookiePolicy } from "./src/pages/CookiePolicy.js";
 const routes = {
-    "/": renderHomePage,
-    "/cookie-policy": renderCookiePolicy,
+    "/safe/": renderHomePage,
+    "/safe/cookie-policy": renderCookiePolicy,
 };
 export const navigateTo = (url) => {
     history.pushState({}, "", url);
