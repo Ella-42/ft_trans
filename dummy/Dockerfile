@@ -14,9 +14,6 @@ RUN npm install
 
 RUN npm install fastify
 
-RUN /bin/sh -c ' \
-    rm -f package.json'
-
 EXPOSE 8080
 
 ENTRYPOINT ["node", "/var/www/dummy/server.js"]

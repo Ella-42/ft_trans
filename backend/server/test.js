@@ -9,21 +9,44 @@ const domain = process.env.domain;
 
 // Initialize SQLite database
 const db = new Database('/var/www/db/pong.sqlite', sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
-    if (err) console.error('Database connection error:', err.message);
-    else console.log('Connected to SQLite database');
+    if (err) {
+        console.error('Database connection error:', err.message);
+    }
+    else {
+        console.log('Connected to SQLite database');
+        db.run("PRAGMA foreign_keys = ON;");
+    }
 });
 
 // Ensure the database exists
 db.serialize(() => {
-    db.run(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nickname TEXT NOT NULL UNIQUE,
-        password TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL
-      )
+    db.exec(`
+        PRAGMA foreign_keys = ON;
+
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nickname TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            friends TEXT DEFAULT '[]',
+            blocked TEXT DEFAULT '[]',
+            pong_wins INT DEFAULT 0,
+            pong_losses INT DEFAULT 0,
+            pong_tournament_wins INT DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS matches (
+            time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            game TEXT NOT NULL,
+            winner INTEGER NOT NULL,
+            loser INTEGER NOT NULL,
+            info TEXT,
+            FOREIGN KEY (winner) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (loser) REFERENCES users(id) ON DELETE CASCADE
+        );
     `, (err) => {
-        if (err) console.error('Error creating table:', err.message);
+        if (err) console.error('Error creating tables:', err.message);
+        else console.log('Tables created successfully');
     });
 });
 
