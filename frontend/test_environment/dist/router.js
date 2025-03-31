@@ -2,7 +2,7 @@ import { renderHomePage } from "./src/pages/HomePage.js";
 import { renderCookiePolicy } from "./src/pages/CookiePolicy.js";
 import { renderLogin } from "./src/pages/Login.js";
 const routes = {
-    "/safe/": renderHomePage,
+    "/safe": renderHomePage,
     "/safe/login": renderLogin,
     "/safe/cookie-policy": renderCookiePolicy,
 };
