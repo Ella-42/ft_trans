@@ -11,7 +11,8 @@
   "dependencies": {
     "fastify": "^4.0.0",
     "node-fetch": "^3.3.2",
-    "@fastify/static": "^6.10.1"
+    "@fastify/static": "^6.10.1",
+    "ws": "^8.17.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"

@@ -50,6 +50,8 @@ services:
     volumes:
       - ./dummy/src/index.html:/var/www/dummy/index.html:ro
       - ./dummy/src/server.js:/var/www/dummy/server.js:ro
+      - /etc/ssl/trans_ella-peeters_me:/etc/ssl/trans_ella-peeters_me:ro #Mount SSL certificate
+      - /home/lpeeters/.ssh/ella-peeters.me.key:/etc/ssh/ella-peeters.me.key:ro #Mount SSH key
     networks:
       - frontend
     restart: always

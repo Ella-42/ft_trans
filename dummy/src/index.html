@@ -56,6 +56,62 @@
             loadUsers();
         }
 
+        async function loadFriends(id) {
+            const res = await fetch(`/api/users/${id}/friends`);
+            const users = await res.json();
+            const list = document.getElementById('friends');
+            list.innerHTML = users.map(friendid => 
+                `<li>${friendid}
+                    <button onclick="deleteFriend(${id}, ${friendid})">Delete</button>
+                </li>`
+            ).join('');
+        }
+
+        async function showFriends() {
+            const id = document.getElementById('toshow').value;
+            const res = await fetch(`/api/users/${id}/friends`);
+            const users = await res.json();
+            const list = document.getElementById('friends');
+            list.innerHTML = users.map(friendid => 
+                `<li>${friendid}
+                    <button onclick="deleteFriend(${id}, ${friendid})">Delete</button>
+                </li>`
+            ).join('');
+        }
+
+        async function updateFriend() {
+            const friendid = document.getElementById('friend').value;
+            const id = document.getElementById('owner').value;
+
+            if (!id) {
+                alert("User ID is required to update a friends list!");
+                return;
+            }
+            if (!friendid) {
+                alert("Friend ID is required to update a friends list!");
+                return;
+            }
+            const res = await fetch(`/api/users/${id}/friends`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ friendid })
+            });
+
+            loadFriends(id);
+            if (!res.ok) {
+                alert("Error updating user");
+            }
+        }
+
+        async function deleteFriend(id, friendid) {
+            await fetch(`/api/users/${id}/friends`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ friendid })
+            });
+            loadFriends(id);
+        }
+
         window.onload = loadUsers;
     </script>
 </head>
@@ -75,6 +131,16 @@
     <input type="email" id="newemail" placeholder="Email">
     <input type="password" id="newpassword" placeholder="Password">
     <button onclick="updateUser()">Update</button>
+
+    <h1>Friends Management</h1>
+    <ul id="friends"></ul>
+
+    <input type="text" id="owner" placeholder="User of the list">
+    <input type="text" id="friend" placeholder="Friend on the list">
+    <button onclick="updateFriend()">Update</button>
+    <h2>Show friend list of</h2>
+    <input type="text" id="toshow" placeholder="User of the list">
+    <button onclick="showFriends()">Show</button>
 </body>
 </html>
 

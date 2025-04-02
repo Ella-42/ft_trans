@@ -1,11 +1,16 @@
 import sqlite3 from 'sqlite3';
 import Fastify from 'fastify';
 import jwt from 'jsonwebtoken';
+import fastifyWebsocket from '@fastify/websocket';
 
-const fastify = Fastify({ logger: true });
+const fastify = Fastify({
+    logger: true
+});
 const { Database } = sqlite3;
 const domain = process.env.domain;
 
+// Register WebSocket plugin
+fastify.register(fastifyWebsocket);
 
 // Initialize SQLite database
 const db = new Database('/var/www/db/pong.sqlite', sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
@@ -187,8 +192,94 @@ fastify.post('/login', async (request, reply) => {
     }
 });
 
+// **7. add friend **
+
+fastify.put('/users/:id/friends', async (request, reply) => {
+    try {
+        const { id } = request.params;
+        const { friendid } = request.body;
+
+        if (id == friendid) {
+            return reply.status(204).send({ message: 'No changes made' });
+        }
+        // Check if user exists before updating
+        const existingUser = await dbGet('SELECT id FROM users WHERE id = ?', [id]);
+        if (!existingUser) return reply.status(404).send({ error: 'User not found' });
+
+        const existingfriend = await dbGet('SELECT id FROM users WHERE id = ?', [friendid]);
+        if (!existingfriend) return reply.status(404).send({ error: 'Friend not found' });
+
+        // Perform the update
+        const row = await dbGet("SELECT friends FROM users WHERE id = ?", [id]);
+        if (!row) {
+            return reply.status(404).send({ message: "User not found" });
+        }
+        let jsonArray = JSON.parse(row.friends);
+        if (jsonArray.includes(friendid)) {
+            console.log("Friend already on friend list");
+            return reply.status(204).send({ message: 'No changes made' });
+        }
+        jsonArray.push(friendid);
+        const result = await dbRun("UPDATE users SET friends = ? WHERE id = ?", [JSON.stringify(jsonArray), id]);
+        if (!result.changes) return reply.status(204).send({ message: 'No changes made' });
+        reply.send({ message: 'Friends list updated successfully' });
+        return ;
+    } catch (err) {
+        reply.status(500).send({ error: 'Failed to update friends list.' });
+    }
+});
+
+// **8. get friends list **
+
+fastify.get('/users/:id/friends', async (request, reply) => {
+    try {
+        const { id } = request.params;
+        const row = await dbGet("SELECT friends FROM users WHERE id = ?", [id]);
+        if (!row) {
+            return reply.status(404).send({ message: "User not found" });
+        }
+        const friends = JSON.parse(row.friends);
+        reply.send(friends);
+        return ;
+    } catch (err) {
+        reply.status(500).send({ error: 'Failed to retrieve friends list.' });
+    }
+});
+
+// **9. delete friend from friends list
+fastify.delete('/users/:id/friends', async (request, reply) => {
+    try {
+        const { id } = request.params;
+        const { friendid } = request.body;
+        const row = await dbGet("SELECT friends FROM users WHERE id = ?", [id]);
+        if (!row) {
+            return reply.status(404).send({ message: "User not found" });
+        }
+        let jsonArray = JSON.parse(row.friends);
+        if (!jsonArray.includes(String(friendid))) {
+            console.log("Friend not on friend list: ", friendid);
+            return reply.status(204).send({ message: 'No changes made' });
+        }
+        jsonArray = jsonArray.filter(item => item !== String(friendid)); // Remove item
+        const result = await dbRun("UPDATE users SET friends = ? WHERE id = ?", [JSON.stringify(jsonArray), id]);
+        if (!result.changes) return reply.status(204).send({ message: 'No changes made' });
+        console.log("Friend deleted");
+        reply.send({ message: 'Friends list updated successfully' });
+        return ;
+    } catch (err) {
+        reply.status(500).send({ error: 'Failed to retrieve friends list.' });
+    }
+});
 
 fastify.get('/', async () => `Testing ${domain}`);
+
+
+fastify.get('/ws', { websocket: true }, (connection, request) => {
+    console.log('WebSocket connection established');
+    connection.socket.on('message', message => {
+        connection.socket.send('Hello from server!');
+    });
+});
 
 fastify.listen({ host: '0.0.0.0', port: 3443 }, err => {
     if (err) throw err;
