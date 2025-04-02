@@ -19,8 +19,17 @@ export const router = () => {
         console.error("❌ ERROR: <div id='app'> NOT FOUND!");
         return;
     }
+    setTimeout(attachMenuListener, 0);
     const page = routes[path] ? routes[path]() : "<h1>404 - Page Not Found</h1>";
     app.innerHTML = page;
 };
 // Handle browser back/forward navigation
 window.addEventListener("popstate", router);
+const attachMenuListener = () => {
+    const mobileMenuButton = document.querySelector(".mobile-menu-button");
+    const mobileMenu = document.querySelector(".navigation-menu");
+    mobileMenuButton.addEventListener("click", () => {
+        if (mobileMenu)
+            mobileMenu.classList.toggle("hidden");
+    });
+};

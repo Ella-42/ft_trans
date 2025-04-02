@@ -3,7 +3,7 @@ import { renderCookiePolicy } from "./src/pages/CookiePolicy.js";
 import { renderLogin } from "./src/pages/Login.js"
 
 const routes: { [key: string]: () => string } = {
-    "/safe/": renderHomePage,
+    "/safe": renderHomePage,
     "/safe/login": renderLogin,
     "/safe/cookie-policy": renderCookiePolicy,
 };
@@ -24,9 +24,21 @@ export const router = () => {
         return;
     }
 
+    setTimeout(attachMenuListener, 0);
+
     const page = routes[path] ? routes[path]() : "<h1>404 - Page Not Found</h1>";
     app.innerHTML = page;
 };
 
 // Handle browser back/forward navigation
 window.addEventListener("popstate", router);
+
+const attachMenuListener = () => {
+	const mobileMenuButton = document.querySelector(".mobile-menu-button");
+	const mobileMenu = document.querySelector(".navigation-menu");
+
+	mobileMenuButton.addEventListener("click", () => {
+			if (mobileMenu)
+				mobileMenu.classList.toggle("hidden");
+	})
+};
