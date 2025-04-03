@@ -6,4 +6,4 @@ RUN	apk add --no-cache nodejs npm
 
 ENTRYPOINT \
 	npm install fastify \
-&&	node test.js
+&&	node api.js
