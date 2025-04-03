@@ -79,7 +79,7 @@ const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
 });
 
 // **1. Fetch all users**
-fastify.get('/users', async (request, reply) => {
+fastify.get('/api/users', async (request, reply) => {
     try {
         const users = await dbAll('SELECT * FROM users');
         reply.send(users);
@@ -89,7 +89,7 @@ fastify.get('/users', async (request, reply) => {
 });
 
 // **2. Fetch user by ID**
-fastify.get('/users/:id', async (request, reply) => {
+fastify.get('/api/users/:id', async (request, reply) => {
     try {
         const { id } = request.params;
         const user = await dbGet('SELECT * FROM users WHERE id = ?', [id]);
@@ -101,7 +101,7 @@ fastify.get('/users/:id', async (request, reply) => {
 });
 
 // **3. Add new user**
-fastify.post('/register', async (request, reply) => {
+fastify.post('/api/register', async (request, reply) => {
     try {
         const { name, email, password } = request.body;
 	    console.log("The email is: ", email);
@@ -124,7 +124,7 @@ function isEmptyOrNull(str) {
     return str === null || str === "" || str === undefined;
 };
 
-fastify.put('/users/:id', async (request, reply) => {
+fastify.put('/api/users/:id', async (request, reply) => {
     try {
         const { id } = request.params;
         const { name, email, password } = request.body;
@@ -164,7 +164,7 @@ fastify.put('/users/:id', async (request, reply) => {
 });
 
 // **5. Get and Update Avatar**
-fastify.get('/users/:id/avatar', async (request, reply) => {
+fastify.get('/api/users/:id/avatar', async (request, reply) => {
     try {
         const { id } = request.params;
         const row = await dbGet("SELECT avatar_img FROM users WHERE id = ?", [id]);
@@ -179,7 +179,7 @@ fastify.get('/users/:id/avatar', async (request, reply) => {
     }
 });
 
-fastify.put('/users/:id/avatar', async (request, reply) => {
+fastify.put('/api/users/:id/avatar', async (request, reply) => {
     try {
         const { id } = request.params;
         const { avatar_img } = request.body;
@@ -202,7 +202,7 @@ fastify.put('/users/:id/avatar', async (request, reply) => {
 });
 
 // **6. Delete user**
-fastify.delete('/users/:id', async (request, reply) => {
+fastify.delete('/api/users/:id', async (request, reply) => {
     try {
         const { id } = request.params;
         const result = await dbRun('DELETE FROM users WHERE id = ?', [id]);
@@ -216,7 +216,7 @@ fastify.delete('/users/:id', async (request, reply) => {
 });
 
 // **7.  login user**
-fastify.post('/login', async (request, reply) => {
+fastify.post('/api/login', async (request, reply) => {
     const { email, password } = request.body;
     try {
         const user = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
@@ -233,7 +233,7 @@ fastify.post('/login', async (request, reply) => {
 
 // **8. add friend **
 
-fastify.put('/users/:id/friends', async (request, reply) => {
+fastify.put('/api/users/:id/friends', async (request, reply) => {
     try {
         const { id } = request.params;
         const { friendid } = request.body;
@@ -270,7 +270,7 @@ fastify.put('/users/:id/friends', async (request, reply) => {
 
 // **9. get friends list **
 
-fastify.get('/users/:id/friends', async (request, reply) => {
+fastify.get('/api/users/:id/friends', async (request, reply) => {
     try {
         const { id } = request.params;
         const row = await dbGet("SELECT friends FROM users WHERE id = ?", [id]);
@@ -286,7 +286,7 @@ fastify.get('/users/:id/friends', async (request, reply) => {
 });
 
 // **10. delete friend from friends list
-fastify.delete('/users/:id/friends', async (request, reply) => {
+fastify.delete('/api/users/:id/friends', async (request, reply) => {
     try {
         const { id } = request.params;
         const { friendid } = request.body;
@@ -310,10 +310,10 @@ fastify.delete('/users/:id/friends', async (request, reply) => {
     }
 });
 
-fastify.get('/', async () => `Testing ${domain}`);
+fastify.get('/api', async () => `Testing ${domain}`);
 
 
-fastify.get('/ws', { websocket: true }, (connection, request) => {
+fastify.get('/api/ws', { websocket: true }, (connection, request) => {
     console.log('WebSocket connection established');
     connection.socket.on('message', message => {
         connection.socket.send('Hello from server!');
