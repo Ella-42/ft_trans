@@ -38,7 +38,8 @@ RUN /bin/sh -c ' \
             blocked TEXT DEFAULT '[]', \
             pong_wins INT DEFAULT 0, \
             pong_losses INT DEFAULT 0, \
-            pong_tournament_wins INT DEFAULT 0 \
+            pong_tournament_wins INT DEFAULT 0, \
+            avatar_img TEXT DEFAULT NULL \
         )"; \
         sqlite3 "$DB_PATH" "CREATE TABLE IF NOT EXISTS matches ( \
             time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, \
@@ -53,4 +54,4 @@ RUN /bin/sh -c ' \
     fi && \
     echo "SQLite database setup completed."'
 
-ENTRYPOINT ["node", "test.js"]
+ENTRYPOINT ["node", "api.js"]

@@ -7,11 +7,6 @@ import fs from 'fs';
 
 const fastify = Fastify({
     logger: true,
-    https: {
-        key: fs.readFileSync('/etc/ssh/ella-peeters.me.key'),  // Private key
-        cert: fs.readFileSync('/etc/ssl/trans_ella-peeters_me/trans_ella-peeters_me.crt'),  // Certificate
-        ca: fs.readFileSync('/etc/ssl/trans_ella-peeters_me/trans_ella-peeters_me.ca-bundle'),  // CA Bundle
-    }
 });
 
 // Proxy requests to backend service
@@ -133,6 +128,35 @@ fastify.delete('/api/users/:id/friends', async (req, reply) => {
         reply.send(data);
     } catch (error) {
         reply.status(500).send({ error: 'Error deleting user' });
+    }
+});
+
+
+// getting avatar
+fastify.get('/api/users/:id/avatar', async (req, reply) => {
+    try {
+        const response = await fetch(`${SQLITE_URL}/users/${req.params.id}/avatar`);
+        const users = await response.json();
+        reply.send(users);
+    } catch (error) {
+        reply.status(500).send({ error: 'Error getting avatar' });
+    }
+});
+
+
+// update avatar
+fastify.put('/api/users/:id/avatar', async (req, reply) => {
+    try {
+        const response = await fetch(`${SQLITE_URL}/users/${req.params.id}/avatar`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(req.body),
+        });
+
+        const data = await response.json();
+        reply.send(data);
+    } catch (error) {
+        reply.status(500).send({ error: 'Error updating avatar' });
     }
 });
 

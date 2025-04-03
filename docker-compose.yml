@@ -22,7 +22,8 @@ services:
       - /home/lpeeters/.ssh/ella-peeters.me.key:/etc/ssh/ella-peeters.me.key:ro #Mount SSH key
       - ./backend/webserver/nginx.conf:/etc/nginx/nginx.conf:ro #Mount Nginx configuration
       - ./backend/webserver/ip_whitelist.js:/etc/nginx/ip_whitelist.js:ro #Mount IP whitelist fetching
-      - ./frontend/test_environment/safe.html:/var/www/html/test_environment/safe.html:ro #Served statically for testing
+      - ./frontend/test_environment:/var/www/html/test_environment:ro #Served statically for testing
+      - ./frontend/production:/var/www/html/production:ro #Placeholder production
 
   # Backend
   server:
@@ -37,7 +38,7 @@ services:
       - frontend #Connects to Nginx
     volumes:
       - db-volume:/var/www/db
-      - ./backend/server/test.js:/var/www/js/test.js:ro
+      - ./backend/server/api.js:/var/www/js/api.js:ro
 
   # Purely for testing
   frontend-dummy:
