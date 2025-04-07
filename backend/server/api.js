@@ -382,7 +382,7 @@ fastify.get('/api/whoami', { preHandler: checkLoginInStatus }, async (request, r
         if (!request.user) {
             return reply.send({ nickname: "guest" });
         }
-        const { id } = request.user.id;
+        const id = request.user.id;
         const user = await dbGet('SELECT nickname FROM users WHERE id = ?', [id]);
         if (!user) {
             return reply.send({ nickname: "guest" });

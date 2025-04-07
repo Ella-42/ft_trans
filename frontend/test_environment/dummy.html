@@ -62,6 +62,7 @@
             });
 
             loadUsers();
+            currentUser();
             if (!res.ok) {
                 alert("Error updating user");
             }
@@ -80,6 +81,7 @@
                     'Content-Type': 'application/json'
                 }});
             loadUsers();
+            currentUser();
         }
 
         async function loadFriends(id) {
@@ -228,9 +230,15 @@
 
         async function currentUser() {
             const token = localStorage.getItem('token');
-            const res = await fetch('/api/whoami');
+            const res = await fetch('/api/whoami', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
             const users = await res.json();
-            const list = document.getElementById('currentuser');
+            const list = document.getElementById('currentUser');
             list.innerHTML = `${users.nickname}`;
         }
 
@@ -240,7 +248,10 @@
             currentUser();
         }
 
-        window.onload = loadUsers;
+        window.addEventListener('load', () => {
+            loadUsers();
+            currentUser();
+        });
     </script>
 </head>
 <body>
