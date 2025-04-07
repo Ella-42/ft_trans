@@ -78,10 +78,45 @@ const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
     });
 });
 
-// **1. Fetch all users**
-fastify.get('/api/users', async (request, reply) => {
+// **Verify Token**
+
+const verifyToken = async (request, reply) => {
     try {
-        const users = await dbAll('SELECT * FROM users');
+        const authHeader = request.headers['authorization'];
+        if (!authHeader) return reply.status(401).send({ error: 'Unauthorized' });
+
+        const token = authHeader.split(' ')[1];
+        const decoded = jwt.verify(token, 'secretKey');
+        request.user = decoded;
+    } catch (err) {
+        return reply.status(401).send({ error: 'Invalid token' });
+    }
+};
+
+function checkLoginInStatus(request, reply, done) {
+    const authHeader = request.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+  
+    if (!token) {
+      request.user = null;
+      return done();
+    }
+  
+    jwt.verify(token, 'secretKey', (err, user) => {
+      if (err) {
+        request.user = null;
+      } else {
+        request.user = user;
+      }
+      done();
+    });
+  }
+
+
+// **1. Fetch all users**
+fastify.get('/api/users', { preHandler: verifyToken }, async (request, reply) => {
+    try {
+        const users = await dbAll('SELECT id, nickname FROM users');
         reply.send(users);
     } catch (err) {
         reply.status(500).send({ error: 'Failed to fetch users' });
@@ -92,7 +127,22 @@ fastify.get('/api/users', async (request, reply) => {
 fastify.get('/api/users/:id', async (request, reply) => {
     try {
         const { id } = request.params;
-        const user = await dbGet('SELECT * FROM users WHERE id = ?', [id]);
+        const user = await dbGet('SELECT id, nickname FROM users WHERE id = ?', [id]);
+        if (!user) return reply.status(404).send({ error: 'User not found' });
+        reply.send(user);
+    } catch (err) {
+        reply.status(500).send({ error: 'Failed to fetch users' });
+    }
+});
+
+// **2.5 Fetch user email by ID**
+fastify.get('/api/users/:id/email', { preHandler: verifyToken }, async (request, reply) => {
+    try {
+        const { id } = request.params;
+        if (parseInt(id) !== request.user.id) {
+            return reply.status(403).send({ error: 'Forbidden: You can only access private info of your own profile' });
+        }
+        const user = await dbGet('SELECT email FROM users WHERE id = ?', [id]);
         if (!user) return reply.status(404).send({ error: 'User not found' });
         reply.send(user);
     } catch (err) {
@@ -124,9 +174,13 @@ function isEmptyOrNull(str) {
     return str === null || str === "" || str === undefined;
 };
 
-fastify.put('/api/users/:id', async (request, reply) => {
+fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply) => {
+
     try {
         const { id } = request.params;
+        if (parseInt(id) !== request.user.id) {
+            return reply.status(403).send({ error: 'Forbidden: You can only modify your own profile' });
+        }
         const { name, email, password } = request.body;
         let updated = 0;
 
@@ -179,9 +233,12 @@ fastify.get('/api/users/:id/avatar', async (request, reply) => {
     }
 });
 
-fastify.put('/api/users/:id/avatar', async (request, reply) => {
+fastify.put('/api/users/:id/avatar', { preHandler: verifyToken }, async (request, reply) => {
     try {
         const { id } = request.params;
+        if (parseInt(id) !== request.user.id) {
+            return reply.status(403).send({ error: 'Forbidden: You can only modify your own profile' });
+        }
         const { avatar_img } = request.body;
 
         // Check if user exists before updating
@@ -202,9 +259,12 @@ fastify.put('/api/users/:id/avatar', async (request, reply) => {
 });
 
 // **6. Delete user**
-fastify.delete('/api/users/:id', async (request, reply) => {
+fastify.delete('/api/users/:id', { preHandler: verifyToken }, async (request, reply) => {
     try {
         const { id } = request.params;
+        if (parseInt(id) !== request.user.id) {
+            return reply.status(403).send({ error: 'Forbidden: You can only delete your own profile' });
+        }
         const result = await dbRun('DELETE FROM users WHERE id = ?', [id]);
 
         if (result.changes === 0) return reply.status(404).send({ error: 'User not found' });
@@ -221,11 +281,11 @@ fastify.post('/api/login', async (request, reply) => {
     try {
         const user = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
         if (!user || user.password !== password) {
-            return res.status(401).json({ error: 'Invalid email or password' });
+            return reply.status(401).json({ error: 'Invalid email or password' });
         }
 
-        const token = jwt.sign({ email: user.email }, 'secretKey', { expiresIn: '12h' });
-        res.send(token);
+        const token = jwt.sign({ id: user.id, email: user.email }, 'secretKey', { expiresIn: '12h' });
+        reply.send(token);
     } catch (err) {
         reply.status(500).send({ error: 'An error occurred while logging in' });
     }
@@ -233,9 +293,12 @@ fastify.post('/api/login', async (request, reply) => {
 
 // **8. add friend **
 
-fastify.put('/api/users/:id/friends', async (request, reply) => {
+fastify.put('/api/users/:id/friends', { preHandler: verifyToken }, async (request, reply) => {
     try {
         const { id } = request.params;
+        if (parseInt(id) !== request.user.id) {
+            return reply.status(403).send({ error: 'Forbidden: You can only modify your own profile' });
+        }
         const { friendid } = request.body;
 
         if (id == friendid) {
@@ -286,9 +349,12 @@ fastify.get('/api/users/:id/friends', async (request, reply) => {
 });
 
 // **10. delete friend from friends list
-fastify.delete('/api/users/:id/friends', async (request, reply) => {
+fastify.delete('/api/users/:id/friends', { preHandler: verifyToken }, async (request, reply) => {
     try {
         const { id } = request.params;
+        if (parseInt(id) !== request.user.id) {
+            return reply.status(403).send({ error: 'Forbidden: You can only modify your own profile' });
+        }
         const { friendid } = request.body;
         const row = await dbGet("SELECT friends FROM users WHERE id = ?", [id]);
         if (!row) {
@@ -307,6 +373,23 @@ fastify.delete('/api/users/:id/friends', async (request, reply) => {
         return ;
     } catch (err) {
         reply.status(500).send({ error: 'Failed to retrieve friends list.' });
+    }
+});
+
+// ** 11. Get current user name
+fastify.get('/api/whoami', { preHandler: checkLoginInStatus }, async (request, reply) => {
+    try {
+        if (!request.user) {
+            return reply.send({ nickname: "guest" });
+        }
+        const { id } = request.user.id;
+        const user = await dbGet('SELECT nickname FROM users WHERE id = ?', [id]);
+        if (!user) {
+            return reply.send({ nickname: "guest" });
+        }
+        return reply.send({ nickname: user.nickname });
+    } catch (err) {
+        reply.status(500).send({ error: 'Failed to fetch username' });
     }
 });
 
