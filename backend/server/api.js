@@ -8,6 +8,8 @@ const fastify = Fastify({
 });
 const { Database } = sqlite3;
 const domain = process.env.domain;
+const privateKey = process.env.PRIVATE_KEY.replace(/\\n/g, '\n');
+const publicKey = process.env.PUBLIC_KEY.replace(/\\n/g, '\n');
 
 // Register WebSocket plugin
 fastify.register(fastifyWebsocket);
@@ -86,7 +88,7 @@ const verifyToken = async (request, reply) => {
         if (!authHeader) return reply.status(401).send({ error: 'Unauthorized' });
 
         const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, 'secretKey');
+        const decoded = jwt.verify(token, publicKey, { algorithms: ['RS256'] });
         request.user = decoded;
     } catch (err) {
         return reply.status(401).send({ error: 'Invalid token' });
@@ -102,7 +104,7 @@ function checkLoginInStatus(request, reply, done) {
       return done();
     }
   
-    jwt.verify(token, 'secretKey', (err, user) => {
+    jwt.verify(token, publicKey, { algorithms: ['RS256'] }, (err, user) => {
       if (err) {
         request.user = null;
       } else {
@@ -284,7 +286,7 @@ fastify.post('/api/login', async (request, reply) => {
             return reply.status(401).json({ error: 'Invalid email or password' });
         }
 
-        const token = jwt.sign({ id: user.id, email: user.email }, 'secretKey', { expiresIn: '12h' });
+        const token = jwt.sign({ id: user.id, email: user.email }, privateKey, { algorithm: 'RS256', expiresIn: '12h' });
         reply.send(token);
     } catch (err) {
         reply.status(500).send({ error: 'An error occurred while logging in' });
