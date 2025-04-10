@@ -85,7 +85,9 @@
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
-                }});
+                },
+                body: JSON.stringify({})
+            });
             loadUsers();
             currentUser();
         }
@@ -117,6 +119,9 @@
             const token = localStorage.getItem('token');
             if (!token) {
                 console.error("No token found");
+                alert('Error showing friend list: Not logged in');
+                const list = document.getElementById('friends');
+                list.innerHTML = '';
                 return;
             }
             const res = await fetch(`/api/users/${id}/friends`, {
@@ -126,6 +131,13 @@
                     'Content-Type': 'application/json'
                 }
             });
+            if (!res.ok) {
+              const error = await res.json();
+              alert(`Error showing friend list: ${error.error || "Unknown error"}`);
+              const list = document.getElementById('friends');
+              list.innerHTML = '';
+              return;
+            }
             const users = await res.json();
             const list = document.getElementById('friends');
             list.innerHTML = users.map(friendid => 
