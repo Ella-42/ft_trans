@@ -32,12 +32,16 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
 
-            await fetch('/api/register', {
+            const res = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, email, password })
             });
-
+            if (!res.ok) {
+              const error = await res.json();
+              alert(`Error adding user: ${error.error || "Unknown error"}`);
+              return;
+            }
             loadUsers();
         }
         async function updateUser() {
@@ -64,7 +68,9 @@
             loadUsers();
             currentUser();
             if (!res.ok) {
-                alert("Error updating user");
+              const error = await res.json();
+              alert(`Error updating user: ${error.error || "Unknown error"}`);
+              return;
             }
         }
 
@@ -154,7 +160,9 @@
 
             loadFriends(id);
             if (!res.ok) {
-                alert("Error updating user");
+              const error = await res.json();
+              alert(`Error updating user: ${error.error || "Unknown error"}`);
+              return;
             }
         }
 
@@ -196,7 +204,9 @@
             });
 
             if (!res.ok) {
-                alert("Error updating avatar");
+              const error = await res.json();
+              alert(`Error updating avatar: ${error.error || "Unknown error"}`);
+              return;
             }
         }
 
@@ -243,6 +253,7 @@
                     loadUsers();
                 } catch (err) {
                     console.error("Error during login:", err);
+                    alert(`Login failed: ${err.message || "Unknown error"}`);
                 }
             });
         });
@@ -308,11 +319,11 @@
     <h2>Login</h2>
 
     <form id="loginForm">
-        <label>Email: <input type="email" id="loginemail" required></label><br>
-        <label>Password: <input type="password" id="loginpassword" required></label><br>
-        <button type="submit">Login</button>
-        <button type="button" onclick="logout()">Logout</button>
-      </form>
+      <label>Email: <input type="email" id="loginemail" required></label><br>
+      <label>Password: <input type="password" id="loginpassword" required></label><br>
+      <button type="submit">Login</button>
+      <button type="button" onclick="logout()">Logout</button>
+    </form>
 
     <h2>Update User</h2>
     <input type="text" id="id" placeholder="ID">
@@ -342,4 +353,3 @@
     <button type="button" onclick="showAvatar()">Show</button>
 </body>
 </html>
-

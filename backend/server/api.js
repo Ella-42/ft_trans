@@ -2,6 +2,7 @@ import sqlite3 from 'sqlite3';
 import Fastify from 'fastify';
 import jwt from 'jsonwebtoken';
 import fastifyWebsocket from '@fastify/websocket';
+import fastifyCors from '@fastify/cors';
 
 const fastify = Fastify({
     logger: true
@@ -10,6 +11,18 @@ const { Database } = sqlite3;
 const domain = process.env.domain;
 const privateKey = process.env.PRIVATE_KEY.replace(/\\n/g, '\n');
 const publicKey = process.env.PUBLIC_KEY.replace(/\\n/g, '\n');
+
+await fastify.register(fastifyCors, {
+  origin: (origin, cb) => {
+    const allowedOrigins = [`https://${domain}`, 'https://localhost'];
+    if (!origin || allowedOrigins.includes(origin)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Not allowed'), false);
+    }
+  },
+  methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
+});
 
 // Register WebSocket plugin
 fastify.register(fastifyWebsocket);
@@ -24,6 +37,11 @@ const db = new Database('/var/www/db/pong.sqlite', sqlite3.OPEN_READWRITE | sqli
         db.run("PRAGMA foreign_keys = ON;");
     }
 });
+
+const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+const passwordRegex = /^(?=.*[A-Za-z\d])[A-Za-z\d@$!%*?&]{3,}$/;
+//const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/;
+const nicknameRegex = /^[\x20-\x7E\u00A0-\u00FF\u0100-\u017F\u0400-\u04FF\u1F00-\u1FFF]+$/;
 
 // Ensure the database exists
 db.serialize(() => {
@@ -159,7 +177,18 @@ fastify.post('/api/register', async (request, reply) => {
 	    console.log("The email is: ", email);
 	    console.log("The password after hashing is: ", password);
         if (!password) return reply.status(400).send({ error: 'Password is required' });
-
+        if (!email) return reply.status(400).send({ error: 'Email is required' });
+        if (!name) return reply.status(400).send({ error: 'Nickname is required' });
+        if (email && !emailRegex.test(email)) {
+            return reply.status(400).send({ error: 'Invalid email format' });
+        }
+        if (password && !passwordRegex.test(password)) {
+//            return reply.status(400).send({ error: 'Password must be at least 8 characters long and contain letters and numbers' });
+            return reply.status(400).send({ error: 'Password too short' });
+        }
+        if (name && !nicknameRegex.test(name)) {
+            return reply.status(400).send({ error: 'Nickname can only contain printable characters' });
+        }
         const result = await dbRun('INSERT INTO users (nickname, email, password) VALUES (?, ?, ?)', [name, email, password]);
         reply.status(201).send({ id: result.lastID, name, email });
     } catch (err) {
@@ -193,6 +222,16 @@ fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply
         if (isEmptyOrNull(name) && isEmptyOrNull(email) && isEmptyOrNull(password)) {
             return reply.status(204).send({ message: 'No changes made' });
         };
+        if (email && !emailRegex.test(email)) {
+            return reply.status(400).send({ error: 'Invalid email format' });
+        }
+        if (password && !passwordRegex.test(password)) {
+//            return reply.status(400).send({ error: 'Password must be at least 8 characters long and contain letters and numbers' });
+            return reply.status(400).send({ error: 'Password too short' });
+        }
+        if (name && !nicknameRegex.test(name)) {
+            return reply.status(400).send({ error: 'Nickname can only contain printable characters' });
+        }
         // Perform the update
         if (!isEmptyOrNull(name) && !isEmptyOrNull(email) && !isEmptyOrNull(password)) {
             const result = await dbRun('UPDATE users SET nickname = ?, email = ?, password = ? WHERE id = ?', [name, email, password, id]);
