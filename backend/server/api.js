@@ -264,7 +264,7 @@ fastify.get('/api/users/:id/avatar', async (request, reply) => {
         const { id } = request.params;
         const row = await dbGet("SELECT avatar_img FROM users WHERE id = ?", [id]);
         if (!row) {
-            return reply.status(404).send({ message: "User not found" });
+            return reply.status(404).send({ error: "User not found" });
         }
         const avatar = row.avatar_img ? row.avatar_img : "https://42.fr/wp-content/uploads/2021/05/42-Final-sigle-seul.svg";
         reply.send({avatar_img: avatar});
@@ -355,7 +355,7 @@ fastify.put('/api/users/:id/friends', { preHandler: verifyToken }, async (reques
         // Perform the update
         const row = await dbGet("SELECT friends FROM users WHERE id = ?", [id]);
         if (!row) {
-            return reply.status(404).send({ message: "User not found" });
+            return reply.status(404).send({ error: "User not found" });
         }
         let jsonArray = JSON.parse(row.friends);
         if (jsonArray.includes(friendid)) {
@@ -379,7 +379,7 @@ fastify.get('/api/users/:id/friends', async (request, reply) => {
         const { id } = request.params;
         const row = await dbGet("SELECT friends FROM users WHERE id = ?", [id]);
         if (!row) {
-            return reply.status(404).send({ message: "User not found" });
+            return reply.status(404).send({ error: "User not found" });
         }
         const friends = JSON.parse(row.friends);
         reply.send(friends);
@@ -399,7 +399,7 @@ fastify.delete('/api/users/:id/friends', { preHandler: verifyToken }, async (req
         const { friendid } = request.body;
         const row = await dbGet("SELECT friends FROM users WHERE id = ?", [id]);
         if (!row) {
-            return reply.status(404).send({ message: "User not found" });
+            return reply.status(404).send({ error: "User not found" });
         }
         let jsonArray = JSON.parse(row.friends);
         if (!jsonArray.includes(String(friendid))) {
