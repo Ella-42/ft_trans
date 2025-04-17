@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management</title>
+    <script>
+        async function loadUsers() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.error("No token found");
+                return;
+            }
+            const res = await fetch('/api/users', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const users = await res.json();
+            const list = document.getElementById('users');
+            list.innerHTML = users.map(user => 
+                `<li>${user.id} - ${user.nickname}
+                    <button onclick="deleteUser(${user.id})">Delete</button>
+                </li>`
+            ).join('');
+        }
+
+        async function addUser() {
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password })
+            });
+            if (!res.ok) {
+              const error = await res.json();
+              alert(`Error adding user: ${error.error || "Unknown error"}`);
+              return;
+            }
+            loadUsers();
+        }
+        async function updateUser() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.error("No token found");
+                return;
+            }
+            const name = document.getElementById('newname').value;
+            const email = document.getElementById('newemail').value;
+            const password = document.getElementById('newpassword').value;
+            const id = document.getElementById('id').value;
+
+            if (!id) {
+                alert("User ID is required to update a user!");
+                return;
+            }
+            const res = await fetch(`/api/users/${id}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password })
+            });
+
+            loadUsers();
+            currentUser();
+            if (!res.ok) {
+              const error = await res.json();
+              alert(`Error updating user: ${error.error || "Unknown error"}`);
+              return;
+            }
+        }
+
+        async function deleteUser(id) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.error("No token found");
+                return;
+            }
+            await fetch(`/api/users/${id}`, {
+                method: 'DELETE' ,
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            });
+            loadUsers();
+            currentUser();
+        }
+
+        async function loadFriends(id) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.error("No token found");
+                return;
+            }
+            const res = await fetch(`/api/users/${id}/friends`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const users = await res.json();
+            const list = document.getElementById('friends');
+            list.innerHTML = users.map(friendid => 
+                `<li>${friendid}
+                    <button onclick="deleteFriend(${id}, ${friendid})">Delete</button>
+                </li>`
+            ).join('');
+        }
+
+        async function showFriends() {
+            const id = document.getElementById('toshow').value;
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.error("No token found");
+                alert('Error showing friend list: Not logged in');
+                const list = document.getElementById('friends');
+                list.innerHTML = '';
+                return;
+            }
+            const res = await fetch(`/api/users/${id}/friends`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!res.ok) {
+              const error = await res.json();
+              alert(`Error showing friend list: ${error.error || "Unknown error"}`);
+              const list = document.getElementById('friends');
+              list.innerHTML = '';
+              return;
+            }
+            const users = await res.json();
+            const list = document.getElementById('friends');
+            list.innerHTML = users.map(friendid => 
+                `<li>${friendid}
+                    <button onclick="deleteFriend(${id}, ${friendid})">Delete</button>
+                </li>`
+            ).join('');
+        }
+
+        async function updateFriend() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.error("No token found");
+                return;
+            }
+            const friendid = document.getElementById('friend').value;
+            const id = document.getElementById('owner').value;
+
+            if (!id) {
+                alert("User ID is required to update a friends list!");
+                return;
+            }
+            if (!friendid) {
+                alert("Friend ID is required to update a friends list!");
+                return;
+            }
+            const res = await fetch(`/api/users/${id}/friends`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ friendid })
+            });
+
+            loadFriends(id);
+            if (!res.ok) {
+              const error = await res.json();
+              alert(`Error updating user: ${error.error || "Unknown error"}`);
+              return;
+            }
+        }
+
+        async function deleteFriend(id, friendid) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.error("No token found");
+                return;
+            }
+            await fetch(`/api/users/${id}/friends`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ friendid })
+            });
+            loadFriends(id);
+        }
+
+        async function updateAvatar() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.error("No token found");
+                return;
+            }
+            const avatar_img = document.getElementById('avatar_img').value;
+            const id = document.getElementById('avatarid').value;
+
+            if (!id) {
+                alert("User ID is required to update an avatar!");
+                return;
+            }
+            if (!avatar_img) {
+                alert("Avatar link is required to update an avatar!");
+                return;
+            }
+            const res = await fetch(`/api/users/${id}/avatar`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ avatar_img })
+            });
+
+            if (!res.ok) {
+              const error = await res.json();
+              alert(`Error updating avatar: ${error.error || "Unknown error"}`);
+              return;
+            }
+        }
+
+        async function showAvatar() {
+            const id = document.getElementById('avatar').value;
+            const res = await fetch(`/api/users/${id}/avatar`);
+            const users = await res.json();
+            const avatarImg = users.avatar_img || 'https://42.fr/wp-content/uploads/2021/05/42-Final-sigle-seul.svg'; //temp image, need to be replaced
+            const list = document.getElementById('avatar_block');
+            list.innerHTML = 
+                `<img src = "${avatarImg}", width="320">`;
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('loginForm');
+            if (!form) {
+                console.error("loginForm not found in the DOM!");
+                return;
+            }
+
+            form.addEventListener('submit', async function(event) {
+                event.preventDefault();
+
+                const email = document.getElementById("loginemail").value;
+                const password = document.getElementById("loginpassword").value;
+                
+                try {
+                    const response = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        console.error("Login failed:", error);
+                        return;
+                    }
+
+                    const token = await response.text();
+                    localStorage.setItem('token', token);
+                    console.log("Logged in successfully!");
+                    currentUser();
+                    loadUsers();
+                } catch (err) {
+                    console.error("Error during login:", err);
+                    alert(`Login failed: ${err.message || "Unknown error"}`);
+                }
+            });
+        });
+/*
+        async function loginUser() {
+            const email = document.getElementById("loginemail").value;
+            const password = document.getElementById("loginpassword").value;
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            if (!response.ok) {
+                console.error("Login failed:", await response.json());
+                return;
+            }
+            const token = await response.text();
+            localStorage.setItem('token', token);
+            console.log("Logged in successfully!");
+            currentUser();
+        }
+*/
+        async function currentUser() {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/whoami', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const users = await res.json();
+            const list = document.getElementById('currentUser');
+            list.innerHTML = `${users.nickname}`;
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            console.log("User logged out.");
+            currentUser();
+        }
+
+        window.addEventListener('load', () => {
+            loadUsers();
+            currentUser();
+        });
+    </script>
+</head>
+<body>
+
+    <h1>User Management</h1>
+    <ul id="users"></ul>
+
+    <h2>Current user:</h2>
+    <p id="currentUser"></p>
+    
+    <h2>Add User</h2>
+    <input type="text" id="name" placeholder="Name">
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button type="button" onclick="addUser()">Add</button>
+
+    <h2>Login</h2>
+
+    <form id="loginForm">
+      <label>Email: <input type="email" id="loginemail" required></label><br>
+      <label>Password: <input type="password" id="loginpassword" required></label><br>
+      <button type="submit">Login</button>
+      <button type="button" onclick="logout()">Logout</button>
+    </form>
+
+    <h2>Update User</h2>
+    <input type="text" id="id" placeholder="ID">
+    <input type="text" id="newname" placeholder="Name">
+    <input type="email" id="newemail" placeholder="Email">
+    <input type="password" id="newpassword" placeholder="Password">
+    <button type="button" onclick="updateUser()">Update</button>
+
+    <h1>Friends Management</h1>
+    <ul id="friends"></ul>
+
+    <input type="text" id="owner" placeholder="User of the list">
+    <input type="text" id="friend" placeholder="Friend on the list">
+    <button type="button" onclick="updateFriend()">Update</button>
+    <h2>Show friends list of</h2>
+    <input type="text" id="toshow" placeholder="User of the list">
+    <button type="button" onclick="showFriends()">Show</button>
+
+    
+    <h1>Avatar Management</h1>
+    <ul id="avatar_block"></ul>
+    <input type="text" id="avatarid" placeholder="User ID">
+    <input type="text" id="avatar_img" placeholder="link to avatar">
+    <button type="button" onclick="updateAvatar()">Update</button>
+    <h2>Show avatar of</h2>
+    <input type="text" id="avatar" placeholder="User ID">
+    <button type="button" onclick="showAvatar()">Show</button>
+</body>
+</html>

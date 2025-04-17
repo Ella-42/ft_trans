@@ -28,15 +28,29 @@ services:
   # Backend
   server:
     container_name: server
-    build: ./backend/server
+    build:
+      context: .
+      dockerfile: backend/server/Dockerfile
     restart: on-failure:3
+    env_file: .env.backend
     environment:
       - domain=trans.ella-peeters.me
     networks:
       - frontend #Connects to Nginx
     volumes:
+      - db-volume:/var/www/db
       - ./backend/server/api.js:/var/www/js/api.js:ro
+
+volumes:
+  db-volume:
+    name: sqlite
+    driver_opts:
+      o: bind
+      type: none
+      device: ./data/sqlite
 
 # Network for frontend
 networks:
   frontend:
+    name: frontend
+    driver: bridge

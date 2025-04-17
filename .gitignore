@@ -1,5 +1,6 @@
 # Don't push any of these file types to a public repository
-*.env
+*.env*
+pong.sqlite
 
 # Fuck off Apple
 .DS_Store
