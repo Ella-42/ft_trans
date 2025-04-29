@@ -7,7 +7,7 @@ RUN mkdir -p /var/www/js && chmod -R 0755 /var/www/js
 
 WORKDIR /var/www/js
 
-COPY ./backend/server/package.json /var/www/js/package.json
+COPY ./backend/database/package.json /var/www/js/package.json
 
 RUN apk add --no-cache \
     nodejs \
