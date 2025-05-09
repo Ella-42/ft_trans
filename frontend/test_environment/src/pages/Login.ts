@@ -27,7 +27,8 @@ export const renderLogin = (): string => {
 						<input class="h-10 rounded text-black" type="email" id="email" name="email">
 						<label for="password" class="text-base">Password</label>
 						<input class="h-10 rounded text-black" type="password" id="password" name="password">
-						<button class="h-10 w-full mt-10 text-base md:text-base text-white bg-primary my-8 py-3 px-6 rounded-md justify-center flex items-center whitespace-nowrap hover:text-primary hover:bg-white" type="submit">Login</button>
+						<button class="h-10 w-full mt-10 text-base md:text-base text-white bg-primary my-2 py-3 px-6 rounded-md justify-center flex items-center whitespace-nowrap hover:text-primary hover:bg-white" type="submit">Login</button>
+						<button class="h-10 w-full mt-1 mb-4 text-base md:text-base text-white bg-primary my-6 py-3 px-6 rounded-md justify-center flex items-center whitespace-nowrap hover:text-primary hover:bg-white" type="button" onclick="window.location.href='/auth';">Login with Google</button>
 					</form>
 					<p class="mb-10 text-base" data-link>Don't have an account? Click <a class="underline text-primary pointer" href="/safe/register" data-link>here</a> to register</p>
 			</div>
