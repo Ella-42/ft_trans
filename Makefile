@@ -6,7 +6,7 @@
 #    By: lpeeters <lpeeters@student.s19.be>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/04 21:07:01 by lpeeters          #+#    #+#              #
-#    Updated: 2025/03/24 13:34:26 by lpeeters         ###   ########.fr        #
+#    Updated: 2025/04/29 19:28:26 by lpeeters         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -27,8 +27,10 @@ status:
 
 # Display logs for various services
 logs:
-	@	echo "server:\n"; \
-		docker logs server \
+	@	echo "database:\n"; \
+		docker logs database \
+	&&	echo "\n\nauthenticator:\n" \
+	&&	docker logs authenticator \
 	&&	echo "\n\nNginx:\n" \
 	&&	docker logs nginx
 
@@ -36,9 +38,13 @@ logs:
 nginx:
 	@docker exec -it nginx sh
 
+# Shell into the authenticator Docker container
+authenticator:
+	@docker exec -it authenticator sh
+
 # Shell into the server Docker container
-server:
-	@docker exec -it server sh
+database:
+	@docker exec -it database sh
 
 # Remove all Docker containers, images, volumes and networks
 clean:
@@ -52,4 +58,4 @@ clean:
 re: down clean up
 
 # Targets
-.PHONY: up down status nginx server logs clean re
+.PHONY: up down status nginx authenticator database logs clean re

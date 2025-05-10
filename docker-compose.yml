@@ -10,10 +10,8 @@ services:
     env_file: .env #IP whitelist
     environment:
       - domain=trans.ella-peeters.me
-    depends_on:
-      - server
     networks:
-      - frontend #Connects to server
+      - frontend #Connects to database
     ports:
       - "80:80" #Http (-> https)
       - "443:443" #Https
@@ -25,21 +23,42 @@ services:
       - ./frontend/test_environment:/var/www/html/test_environment:ro #Served statically for testing
       - ./frontend/production:/var/www/html/production:ro #Placeholder production
 
-  # Backend
-  server:
-    container_name: server
+  # Backend database
+  database:
+    container_name: database
     build:
       context: .
-      dockerfile: backend/server/Dockerfile
+      dockerfile: backend/database/Dockerfile
     restart: on-failure:3
     env_file: .env.backend
     environment:
       - domain=trans.ella-peeters.me
+    depends_on:
+      - nginx
     networks:
       - frontend #Connects to Nginx
+      - backend #Connects to authenticator
     volumes:
       - db-volume:/var/www/db
-      - ./backend/server/api.js:/var/www/js/api.js:ro
+      - ./backend/database/api.js:/var/www/js/api.js:ro
+
+  # Backend authenticator
+  authenticator:
+    container_name: authenticator
+    build: ./backend/authenticator
+    restart: on-failure:3
+    env_file: .google_credentials.env
+    #environment:
+      #- domain=trans.ella-peeters.me
+    depends_on:
+      - database
+    networks:
+      - frontend #Connects to Nginx
+      - backend #Connects to database
+    volumes:
+      #- db-volume:/var/www/db
+      - ./backend/authenticator/google_authenticator.js:/srv/google_authenticator.js:ro
+      - ./backend/authenticator/package.json:/srv/package.json:ro
 
 volumes:
   db-volume:
@@ -49,8 +68,7 @@ volumes:
       type: none
       device: ./data/sqlite
 
-# Network for frontend
+# Networks for frontend and backend
 networks:
   frontend:
-    name: frontend
-    driver: bridge
+  backend:
