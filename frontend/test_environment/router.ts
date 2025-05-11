@@ -3,6 +3,7 @@ import { renderCookiePolicy } from "./src/pages/CookiePolicy.js";
 import { renderLogin } from "./src/pages/Login.js";
 import { renderRegister } from "./src/pages/Register.js";
 import { attachRegisterFormListener } from './src/pages/Register.js';
+import { attachLoginFormListener } from './src/pages/Login.js';
 
 const routes: { [key: string]: () => string } = {
     "/safe": renderHomePage,
@@ -37,6 +38,8 @@ export const router = () => {
 
     if (path === "/safe/register")
 	    attachRegisterFormListener();
+    if (path === "/safe/login")
+	    attachLoginFormListener();
 }; 
 // Handle browser back/forward navigation
 window.addEventListener("popstate", router);

@@ -1,18 +1,14 @@
 //import axios from 'axios'
 import { renderNavBar } from '../components/NavBar.js';
 import { renderFooter } from '../components/Footer.js';
-// export const sendDataToBackend = async (email: string, password: string) => {
-// 	const { data } = await axios.post('http://localhost:1919/login', {
-// 			email, password, 
-// 		}, {
-// 			headers: {
-// 				'Content-Type': 'application/json'
-// 			}
-// 		}
-// 	)
-// 	console.log("The data is: ", data);
-// 	return data;
-// }
+export const attachLoginFormListener = () => {
+    const loginForm = document.querySelector('#loginForm');
+    console.log("The attachLoginFormListener runs");
+    loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        console.log("The login function runs");
+    });
+};
 export const renderLogin = () => {
     return `
   	${renderNavBar()}

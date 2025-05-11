@@ -1,12 +1,40 @@
 import { renderNavBar } from '../components/NavBar.js';
 import { renderFooter } from '../components/Footer.js';
+import { navigateTo } from '../../router.js';
+import { emailValidation } from '../tools/dataValidation.js';
 export const attachRegisterFormListener = () => {
     const registerForm = document.querySelector('#registerForm');
     console.log("The atachRegisterFormListener runs");
-    registerForm.addEventListener('submit', (event) => {
+    registerForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         console.log("The event listener for the form is added");
-        console.log("The event is: ", event.target.value);
+        console.log("The event is: ", event.target);
+        const registerForm = document.querySelector('#registerForm');
+        const formData = new FormData(registerForm);
+        const email = formData.get('email');
+        const password = formData.get('password');
+        const nickName = formData.get('nickName');
+        console.log("The email is: ", email);
+        console.log("The password is: ", password);
+        if (!emailValidation(email))
+            return;
+        try {
+            const response = await axios.post('https://trans.ella-peeters.me/api/register', {
+                email: String(email),
+                password: String(password),
+                name: String(nickName),
+            }, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            console.log("The response after registering is: ", response);
+            sessionStorage.setItem('registrationSuccess', 'true');
+            navigateTo('/safe/login');
+        }
+        catch (error) {
+            console.error("The error is: ", error);
+        }
     });
 };
 //setTimeout(attachRegisterFormListener, 0);
@@ -34,6 +62,8 @@ export const renderRegister = () => {
 					<form class="flex flex-col gap-2 w-72" id="registerForm" >
 						<label for="email" class="text-base">Email</label>
 						<input class="h-10 rounded text-black" type="email" id="email" name="email">
+						<label for="nickName" class="text-base">Nickname</label>
+						<input class="h-10 rounded text-black" type="text" id="nickName" name="nickName">
 						<label for="password" class="text-base">Password</label>
 						<input class="h-10 rounded text-black" type="password" id="password" name="password">
 						<button class="h-10 w-full mt-10 text-base md:text-base text-white bg-primary my-8 py-3 px-6 rounded-md justify-center flex items-center whitespace-nowrap hover:text-primary hover:bg-white" type="submit">Register</button>
