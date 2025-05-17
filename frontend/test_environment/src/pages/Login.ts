@@ -1,7 +1,8 @@
-//import axios from 'axios'
 import { renderNavBar } from '../components/NavBar.js'
 import { renderFooter } from '../components/Footer.js'
+import { emailValidation, loginPasswordValidation } from '../tools/dataValidation.js'
 
+declare const axios: any;
 
 export const attachLoginFormListener = () => {
 	const loginForm = document.querySelector('#loginForm');
@@ -9,6 +10,40 @@ export const attachLoginFormListener = () => {
 	loginForm.addEventListener('submit', async (event) => {
 		event.preventDefault();
 		console.log("The login function runs");
+
+		const loginForm = document.querySelector('#loginForm') as HTMLFormElement;
+		const formData = new FormData(loginForm);
+
+		const email = formData.get('email') as string;
+		const password = formData.get('password') as string;
+
+		console.log("The email is: ", email);
+		console.log("The password is: ", password);
+
+		if (!emailValidation(email)) return;
+		if (!loginPasswordValidation(password)) return;
+
+
+		try
+		{
+			console.log("test1");
+			const response = await axios.post('https://trans.ella-peeters.me/api/login', 
+			{
+				email: String(email),
+				password: String(password),
+			},
+			{
+				headers:
+				{
+					'Content-Type': 'application/json'
+				}
+			})
+			console.log("The reponse after logging in is: ", response);
+		} catch (error)
+		{
+			console.error("The error is: ", error);
+		}
+
 	});
 };
 

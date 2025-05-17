@@ -38,6 +38,27 @@ export const passwordValidation = (password) => {
         return true;
     return false;
 };
+export const loginPasswordValidation = (password) => {
+    if (!password) {
+        Swal.fire({
+            title: 'Error!',
+            text: "The password field cannot be empty!",
+            icon: 'error',
+        });
+        return false;
+    }
+    if (checkForForbiddenCharacters(password, "password"))
+        return false;
+    if (!validateData(password, /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/)) {
+        Swal.fire({
+            title: 'Error!',
+            text: 'The password is not in the correct format! Try again!',
+            icon: 'error',
+        });
+        return false;
+    }
+    return true;
+};
 export const registerPasswordValidation = (password, passwordConfirmation) => {
     if (!password || !passwordConfirmation) {
         Swal.fire({
