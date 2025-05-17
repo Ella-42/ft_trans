@@ -1,7 +1,7 @@
 import { renderNavBar } from '../components/NavBar.js';
 import { renderFooter } from '../components/Footer.js';
 import { navigateTo } from '../../router.js';
-import { emailValidation } from '../tools/dataValidation.js';
+import { emailValidation, registerPasswordValidation, usernameValidation } from '../tools/dataValidation.js';
 export const attachRegisterFormListener = () => {
     const registerForm = document.querySelector('#registerForm');
     console.log("The atachRegisterFormListener runs");
@@ -13,10 +13,15 @@ export const attachRegisterFormListener = () => {
         const formData = new FormData(registerForm);
         const email = formData.get('email');
         const password = formData.get('password');
+        const passwordConfirmation = formData.get('passwordConfirmation');
         const nickName = formData.get('nickName');
         console.log("The email is: ", email);
         console.log("The password is: ", password);
         if (!emailValidation(email))
+            return;
+        if (!registerPasswordValidation(password, passwordConfirmation))
+            return;
+        if (!usernameValidation(nickName))
             return;
         try {
             const response = await axios.post('https://trans.ella-peeters.me/api/register', {
@@ -37,21 +42,6 @@ export const attachRegisterFormListener = () => {
         }
     });
 };
-//setTimeout(attachRegisterFormListener, 0);
-//export const sendDataToBackend = async (event) => {
-//	event.preventDefault();
-//	console.log("The event is: ", event);
-// 	//const { data } = await axios.post('http://localhost:1919/login', {
-// 	//		email, password, 
-// 	//	}, {
-// 	//		headers: {
-// 	//			'Content-Type': 'application/json'
-// 	//		}
-// 	//	}
-// 	//)
-// 	//console.log("The data is: ", data);
-// 	//return data;
-// }
 export const renderRegister = () => {
     return `
   	${renderNavBar()}
@@ -66,6 +56,8 @@ export const renderRegister = () => {
 						<input class="h-10 rounded text-black" type="text" id="nickName" name="nickName">
 						<label for="password" class="text-base">Password</label>
 						<input class="h-10 rounded text-black" type="password" id="password" name="password">
+						<label for="passwordConfirmation" class="text-base">Password confirmation</label>
+						<input class="h-10 rounded text-black" type="password" id="passwordConfirmation" name="passwordConfirmation">
 						<button class="h-10 w-full mt-10 text-base md:text-base text-white bg-primary my-8 py-3 px-6 rounded-md justify-center flex items-center whitespace-nowrap hover:text-primary hover:bg-white" type="submit">Register</button>
 					</form>
 					<p class="mb-10 text-base" data-link>Already have an account? Click <a class="underline text-primary pointer" href="/safe/login" data-link>here</a> to login</p>

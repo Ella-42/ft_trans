@@ -916,6 +916,10 @@ video {
   text-transform: uppercase;
 }
 
+.lowercase {
+  text-transform: lowercase;
+}
+
 .leading-loose {
   line-height: 2;
 }
