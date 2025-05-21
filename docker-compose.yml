@@ -12,6 +12,7 @@ services:
       - domain=trans.ella-peeters.me
     networks:
       - frontend #Connects to database
+      - backend #Connects to backend
     ports:
       - "80:80" #Http (-> https)
       - "443:443" #Https
@@ -37,7 +38,7 @@ services:
       - nginx
     networks:
       - frontend #Connects to Nginx
-      - backend #Connects to authenticator
+      - database #Connects to authenticator
     volumes:
       - db-volume:/var/www/db
       - ./backend/database/api.js:/var/www/js/api.js:ro
@@ -53,8 +54,8 @@ services:
     depends_on:
       - database
     networks:
-      - frontend #Connects to Nginx
-      - backend #Connects to database
+      - database #Connects to database
+      - backend #Connects to Nginx
     volumes:
       #- db-volume:/var/www/db
       - ./backend/authenticator/google_authenticator.js:/srv/google_authenticator.js:ro
@@ -72,3 +73,4 @@ volumes:
 networks:
   frontend:
   backend:
+  database:
