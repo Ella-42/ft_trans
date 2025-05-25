@@ -3,6 +3,7 @@ import Fastify from 'fastify';
 import jwt from 'jsonwebtoken';
 import fastifyWebsocket from '@fastify/websocket';
 import fastifyCors from '@fastify/cors';
+import fastifyCookie from '@fastify/cookie';
 
 const fastify = Fastify({
     logger: true
@@ -14,7 +15,7 @@ const { Database } = sqlite3;
 const domain = process.env.domain;
 const privateKey = process.env.PRIVATE_KEY.replace(/\\n/g, '\n');
 const publicKey = process.env.PUBLIC_KEY.replace(/\\n/g, '\n');
-const { addGameWin, addGameLoss } = require('./game_tools');
+//import { addGameWin, addGameLoss } from './game_tools.js';
 
 await fastify.register(fastifyCors, {
   origin: (origin, cb) => {
@@ -25,8 +26,15 @@ await fastify.register(fastifyCors, {
       cb(new Error('Not allowed'), false);
     }
   },
+  credentials: true,
   methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
 });
+
+await fastify.register(fastifyCookie, {
+    secret: process.env.COOKIE_SECRET, // for signed cookies
+    parseOptions: {} // options for parsing
+  });
+  
 
 // Register WebSocket plugin
 fastify.register(fastifyWebsocket);
@@ -107,10 +115,8 @@ const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
 
 const verifyToken = async (request, reply) => {
     try {
-        const authHeader = request.headers['authorization'];
-        if (!authHeader) return reply.status(401).send({ error: 'Unauthorized' });
-
-        const token = authHeader.split(' ')[1];
+        const token = request.cookies.token;
+        if (!token) return reply.status(401).send({ error: 'Unauthorized' });
         const decoded = jwt.verify(token, publicKey, { algorithms: ['RS256'] });
         request.user = decoded;
     } catch (err) {
@@ -119,8 +125,7 @@ const verifyToken = async (request, reply) => {
 };
 
 function checkLoginInStatus(request, reply, done) {
-    const authHeader = request.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    const token = request.cookies.token;
   
     if (!token) {
       request.user = null;
@@ -345,7 +350,13 @@ fastify.post('/api/login', async (request, reply) => {
         }
 
         const token = jwt.sign({ id: user.id, email: user.email }, privateKey, { algorithm: 'RS256', expiresIn: '12h' });
-        reply.send(token);
+        reply.setCookie('token', token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'Strict',
+          path: '/',
+          maxAge: 60 * 60 * 12 // 12 hours
+        }).send({ success: true });
     } catch (err) {
         reply.status(500).send({ error: 'An error occurred while logging in' });
     }
@@ -453,8 +464,15 @@ fastify.get('/api/whoami', { preHandler: checkLoginInStatus }, async (request, r
     }
 });
 
+// ** 12. Logout
+fastify.post('/api/logout', async (request, reply) => {
+    reply.clearCookie('token', {
+        path: '/'
+    }).send({ success: true });
+});
 
-// ** 12. Match history
+
+// ** 13. Match history
 
 fastify.get('/api/users/:id/history', { preHandler: verifyToken }, async (request, reply) => {
     try {
@@ -491,17 +509,6 @@ fastify.get('/api/users/:id/history', { preHandler: verifyToken }, async (reques
         reply.status(500).send({ error: 'Failed to fetch match history' });
     }
 });
-
-//code to call add game win and add game loss. No functions are using them at this moment
-//{
-//	try {
-//			await addGameWin(db, winner, game);
-//			await addGameLoss(db, loser, game);
-//	} catch (err) {
-//		console.error(err);
-//	}
-//}
-
 
 fastify.get('/api', async () => `Testing ${domain}`);
 

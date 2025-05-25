@@ -1,7 +1,7 @@
 
 const VALID_GAMES = ["pong"];
 
-function addGameWin(db, userId, game) {
+export function addGameWin(db, userId, game) {
 	if (!VALID_GAMES.includes(game)) throw new Error("Invalid game");
 
 	const query = `UPDATE users SET ${game}_wins = ${game}_wins + 1 WHERE id = ?`;
@@ -14,7 +14,7 @@ function addGameWin(db, userId, game) {
 	});
 }
 
-function addGameLoss(db, userId, game) {
+export function addGameLoss(db, userId, game) {
 	if (!VALID_GAMES.includes(game)) throw new Error("Invalid game");
 
 	const query = `UPDATE users SET ${game}_losses = ${game}_losses + 1 WHERE id = ?`;
@@ -27,7 +27,14 @@ function addGameLoss(db, userId, game) {
 	});
 }
 
-module.exports = {
-	addGameWin,
-	addGameLoss,
-};
+
+
+//code to call add game win and add game loss. No functions are using them at this moment
+//{
+//	try {
+//			await addGameWin(db, winner, game);
+//			await addGameLoss(db, loser, game);
+//	} catch (err) {
+//		console.error(err);
+//	}
+//}
