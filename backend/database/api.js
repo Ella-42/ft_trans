@@ -11,6 +11,7 @@ const { Database } = sqlite3;
 const domain = process.env.domain;
 const privateKey = process.env.PRIVATE_KEY.replace(/\\n/g, '\n');
 const publicKey = process.env.PUBLIC_KEY.replace(/\\n/g, '\n');
+const { addGameWin, addGameLoss } = require('./game_tools');
 
 await fastify.register(fastifyCors, {
   origin: (origin, cb) => {
@@ -433,6 +434,56 @@ fastify.get('/api/whoami', { preHandler: checkLoginInStatus }, async (request, r
         reply.status(500).send({ error: 'Failed to fetch username' });
     }
 });
+
+
+// ** 12. Match history
+
+fastify.get('/api/users/:id/history', { preHandler: verifyToken }, async (request, reply) => {
+    try {
+        const { id } = request.params;
+
+        const matches = await dbGet(
+          'SELECT * FROM matches WHERE winner = ? OR loser = ? ORDER BY time DESC LIMIT 25', [id, id]
+//Not sure if 25 is a good number
+        );
+
+        const matchesWithNick = [];
+        for (const match of matches) {
+          const winner = await dbGet(
+            'SELECT nickname FROM users WHERE id = ?', [match.winner]
+          );
+          const loser = await dbGet(
+            'SELECT nickname FROM users WHERE id = ?', [match.loser]
+          );
+          matchesWithNick.push({
+            ...match,
+            winner: {
+              id: match.winner,
+              nickname: winner ? winner.nickname : 'Deleted user'
+            },
+            loser: {
+              id: match.loser,
+              nickname: loser ? loser.nickname : 'Deleted user'
+            }
+          });
+        }
+        reply.status(200).send(matchesWithNick);
+
+    } catch (err) {
+        reply.status(500).send({ error: 'Failed to fetch match history' });
+    }
+});
+
+//code to call add game win and add game loss. No functions are using them at this moment
+//{
+//	try {
+//			await addGameWin(db, winner, game);
+//			await addGameLoss(db, loser, game);
+//	} catch (err) {
+//		console.error(err);
+//	}
+//}
+
 
 fastify.get('/api', async () => `Testing ${domain}`);
 
