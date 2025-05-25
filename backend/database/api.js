@@ -7,6 +7,9 @@ import fastifyCors from '@fastify/cors';
 const fastify = Fastify({
     logger: true
 });
+const internalFastify = Fastify({
+    logger: true
+});
 const { Database } = sqlite3;
 const domain = process.env.domain;
 const privateKey = process.env.PRIVATE_KEY.replace(/\\n/g, '\n');
@@ -50,8 +53,9 @@ db.serialize(() => {
 
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            google_id TEXT UNIQUE,
             nickname TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL,
+            password TEXT,
             email TEXT NOT NULL UNIQUE,
             friends TEXT DEFAULT '[]',
             blocked TEXT DEFAULT '[]',
@@ -194,6 +198,20 @@ fastify.post('/api/register', async (request, reply) => {
     } catch (err) {
         if (err.code === 'SQLITE_CONSTRAINT') {
             return reply.status(400).send({ error: 'Email or nickname is already in use' });
+        }
+        reply.status(500).send({ error: 'Failed to add user' });
+    }
+});
+
+// **3.5 Add new Google user**
+internalFastify.post('/api/google_register', async (request, reply) => {
+    try {
+		const { id, name, email, picture } = request.body;
+        const result = await dbRun('INSERT INTO users (google_id, nickname, email, avatar_img) VALUES (?, ?, ?, ?)', [id, name, email, picture]);
+        reply.status(201).send({ id: result.lastID, name, email });
+    } catch (err) {
+        if (err.code === 'SQLITE_CONSTRAINT') {
+            return reply.status(400).send({ error: 'Already registered' });
         }
         reply.status(500).send({ error: 'Failed to add user' });
     }
@@ -446,5 +464,10 @@ fastify.get('/api/ws', { websocket: true }, (connection, request) => {
 
 fastify.listen({ host: '0.0.0.0', port: 3443 }, err => {
     if (err) throw err;
-    console.log(`Server running on https://${domain}:3443/api`);
+    console.log(`Server running on https://${domain}/api`);
+});
+
+internalFastify.listen({ host: '0.0.0.0', port: 4334 }, err => {
+    if (err) throw err;
+    console.log(`Internal server running locally on port 4334`);
 });

@@ -12,6 +12,22 @@ const redirectURI = process.env.GOOGLE_CALLBACK_URL;
 // Create Fastify instance
 const app = Fastify();
 
+function handleResponse(response)
+{
+	return (response.json()
+
+	.then
+	(
+		data =>
+		{
+			if (!response.ok)
+				throw (Object.assign(new Error(`HTTP: Status: ${response.status}; ${data.error}`), {status: response.status}));
+
+			return (data);
+		}
+	));
+}
+
 // Redirect user to Google OAuth2 consent screen
 function authenticator(request, response)
 {
@@ -56,21 +72,7 @@ function getToken(code)
 
 	.then
 	(
-		response =>
-		{
-			if (!response.ok)
-				throw (Object.assign(new Error(`HTTP: Status: ${response.status}`), {status: response.status}));
-
-			return (response.json());
-		}
-	)
-
-	.catch
-	(
-		error =>
-		{
-			throw (error);
-		}
+		handleResponse
 	));
 }
 
@@ -93,21 +95,30 @@ function getUserData(token)
 
 	.then
 	(
-		response =>
-		{
-			if (!response.ok)
-				throw (Object.assign(new Error(`HTTP: Status: ${response.status}`), {status: response.status}));
+		handleResponse
+	));
+}
 
-			return (response.json());
+function postUserData(userData)
+{
+	return (fetch
+	(
+		`http://database:4334/api/google_register`,
+		{
+			method: 'POST',
+
+			headers:
+			{
+				'Content-Type': 'application/json'
+			},
+
+			body: JSON.stringify(userData)
 		}
 	)
 
-	.catch
+	.then
 	(
-		error =>
-		{
-			throw (error);
-		}
+		handleResponse
 	));
 }
 
@@ -118,19 +129,12 @@ function handleCallback(request, response)
 
 	.then
 	(
-		token =>
-		{
-			return (getUserData(token));
-		}
+		getUserData
 	)
 
 	.then
 	(
-		userData =>
-		{
-			console.log('User data:', userData);
-			response.send(`Succesfully logged in as ${userData.name}`);
-		}
+		postUserData
 	)
 
 	.catch
