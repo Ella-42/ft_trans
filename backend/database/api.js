@@ -35,6 +35,10 @@ await fastify.register(fastifyCookie, {
     parseOptions: {} // options for parsing
   });
   
+await internalFastify.register(fastifyCookie, {
+    secret: process.env.COOKIE_SECRET,
+    parseOptions: {}
+});
 
 // Register WebSocket plugin
 fastify.register(fastifyWebsocket);
@@ -115,9 +119,15 @@ const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
 
 const verifyToken = async (request, reply) => {
     try {
-        const token = request.cookies.token;
-        if (!token) return reply.status(401).send({ error: 'Unauthorized' });
-        const decoded = jwt.verify(token, publicKey, { algorithms: ['RS256'] });
+        if (!request.cookies.token) {
+            return reply.status(401).send({ error: 'Unauthorized: No token cookies provided' });
+        }
+        const token = request.unsignCookie(request.cookies.token);
+        if (!token.valid) {
+            return reply.status(401).send({ error: 'Unauthorized: Invalid cookie signature' });
+        }
+        if (!token.value) return reply.status(401).send({ error: 'Unauthorized: Invalid token' });
+        const decoded = jwt.verify(token.value, publicKey, { algorithms: ['RS256'] });
         request.user = decoded;
     } catch (err) {
         return reply.status(401).send({ error: 'Invalid token' });
@@ -125,13 +135,20 @@ const verifyToken = async (request, reply) => {
 };
 
 function checkLoginInStatus(request, reply, done) {
-    const token = request.cookies.token;
-  
-    if (!token) {
+    if (!request.cookies.token) {
+        request.user = null;
+        return done();
+    }
+    const token = request.unsignCookie(request.cookies.token);
+    if (!token.valid) {
+          return reply.status(401).send({ error: 'Unauthorized: Invalid cookie signature' });
+    }
+
+    if (!token.value) {
       request.user = null;
       return done();
     }
-  
+
     jwt.verify(token, publicKey, { algorithms: ['RS256'] }, (err, user) => {
       if (err) {
         request.user = null;
@@ -140,7 +157,7 @@ function checkLoginInStatus(request, reply, done) {
       }
       done();
     });
-  }
+}
 
 
 // **1. Fetch all users**
@@ -351,6 +368,7 @@ fastify.post('/api/login', async (request, reply) => {
 
         const token = jwt.sign({ id: user.id, email: user.email }, privateKey, { algorithm: 'RS256', expiresIn: '12h' });
         reply.setCookie('token', token, {
+          signed: true,
           httpOnly: true,
           secure: true,
           sameSite: 'Strict',
