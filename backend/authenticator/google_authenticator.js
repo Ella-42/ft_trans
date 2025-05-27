@@ -12,6 +12,7 @@ const redirectURI = process.env.GOOGLE_CALLBACK_URL;
 // Create Fastify instance
 const app = Fastify();
 
+// Response handler helper function to check status of fetch requests
 function handleResponse(response)
 {
 	return (response.json()
@@ -70,10 +71,7 @@ function getToken(code)
 		}
 	)
 
-	.then
-	(
-		handleResponse
-	));
+	.then(handleResponse));
 }
 
 // Fetch user data using an access token
@@ -93,12 +91,10 @@ function getUserData(token)
 		}
 	)
 
-	.then
-	(
-		handleResponse
-	));
+	.then(handleResponse));
 }
 
+// Register user in database
 function postUserData(userData)
 {
 	return (fetch
@@ -114,35 +110,51 @@ function postUserData(userData)
 
 			body: JSON.stringify(userData)
 		}
-	)
-
-	.then
-	(
-		handleResponse
 	));
 }
 
-// Extract authorization code, fetch access token and user data
+// Set user's cookie to database's JWT
+function setUserCookie(res, response)
+{
+	const cookie = res.headers.get('set-cookie');
+
+	return (res.json()
+
+	.then
+	(
+		data =>
+		{
+			if (!res.ok)
+				throw (Object.assign(new Error(`HTTP: Status: ${res.status}; ${data.error}`), { status: res.status }));
+
+			response.header('set-cookie', cookie);
+		}
+	));
+}
+
+// Extract authorization code, fetch access token and user data, register user in database, set user cookie and redirect
 function handleCallback(request, response)
 {
 	return (getToken(request.query.code)
 
-	.then
-	(
-		getUserData
-	)
+	.then(getUserData)
+
+	.then(postUserData)
 
 	.then
 	(
-		postUserData
+		res =>
+			setUserCookie(res, response)
 	)
+
+	.then(() => response.code(302).header('location', 'https://' + process.env.domain + '/safe').send())
 
 	.catch
 	(
 		error =>
 		{
 			console.error(error);
-			response.status(error.status).send(`Internal server ${error}`);
+			response.status(error.status || 500).send(`Internal server error: ${error.message || error}`);
 		}
 	));
 }
