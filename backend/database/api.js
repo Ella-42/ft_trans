@@ -149,7 +149,7 @@ function checkLoginInStatus(request, reply, done) {
       return done();
     }
 
-    jwt.verify(token, publicKey, { algorithms: ['RS256'] }, (err, user) => {
+    jwt.verify(token.value, publicKey, { algorithms: ['RS256'] }, (err, user) => {
       if (err) {
         request.user = null;
       } else {
