@@ -1,5 +1,6 @@
 import { renderNavBar } from '../components/NavBar.js'
 import { renderFooter } from '../components/Footer.js'
+import { navigateTo } from '../../router.js'
 import { emailValidation, loginPasswordValidation } from '../tools/dataValidation.js'
 
 declare const axios: any;
@@ -39,6 +40,8 @@ export const attachLoginFormListener = () => {
 				}
 			})
 			console.log("The reponse after logging in is: ", response);
+			sessionStorage.setItem('loginSuccess', 'true');
+			navigateTo('/safe/dashboard');
 		} catch (error)
 		{
 			console.error("The error is: ", error);

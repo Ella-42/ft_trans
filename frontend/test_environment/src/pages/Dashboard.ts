@@ -1,6 +1,6 @@
-//import { renderLoggedInSideBar } from '../components/LoggedInSideBar'
+import { renderLoggedInSideBar } from '../components/LoggedInSideBar.js'
 import { renderFooter } from '../components/Footer.js'
-//import { renderLoggedInNavBar } from '../components/LoggedInNavBar';
+import { renderLoggedInNavBar } from '../components/LoggedInNavBar.js';
 //import { renderFriends } from '../components/Friends';
 //import { renderRecentMatches } from '../components/RecentMatches';
 
@@ -9,7 +9,9 @@ const date = new Date().toLocaleDateString('en-us', {weekday: "long", month: "sh
 export const renderDashboard = (): string => {
 	return `
 	<section class="flex">
+		${renderLoggedInSideBar()}
 		<section class="flex flex-col w-full">
+			${renderLoggedInNavBar()}
 			<section class="bg-primary-background text-white">
 				<div class="container px-5 flex flex-col">
 					<div class="px-10 py-5 rounded-xl my-5 bg-gray-900 flex justify-between items-center">

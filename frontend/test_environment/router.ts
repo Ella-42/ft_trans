@@ -12,6 +12,7 @@ const routes: { [key: string]: () => string } = {
     "/safe/cookie-policy": renderCookiePolicy,
     "/safe/register": renderRegister,
     "/safe/dashboard": renderDashboard,
+
 };
 
 export const navigateTo = (url: string) => {
