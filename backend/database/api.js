@@ -4,41 +4,49 @@ import jwt from 'jsonwebtoken';
 import fastifyWebsocket from '@fastify/websocket';
 import fastifyCors from '@fastify/cors';
 import fastifyCookie from '@fastify/cookie';
+//import { addGameWin, addGameLoss } from './game_tools.js';
 
-const fastify = Fastify({
-    logger: true
-});
-const internalFastify = Fastify({
-    logger: true
-});
 const { Database } = sqlite3;
 const domain = process.env.domain;
 const privateKey = process.env.PRIVATE_KEY.replace(/\\n/g, '\n');
 const publicKey = process.env.PUBLIC_KEY.replace(/\\n/g, '\n');
-//import { addGameWin, addGameLoss } from './game_tools.js';
 
-await fastify.register(fastifyCors, {
-  origin: (origin, cb) => {
-    const allowedOrigins = [`https://${domain}`, 'https://localhost'];
-    if (!origin || allowedOrigins.includes(origin)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Not allowed'), false);
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
-});
+function createInstance() {
+	return Fastify({
+		logger: true
+	})
+}
 
-await fastify.register(fastifyCookie, {
-    secret: process.env.COOKIE_SECRET, // for signed cookies
-    parseOptions: {} // options for parsing
-  });
+function registerCors(instance) {
+	return instance.register(fastifyCors, {
+		origin: (origin, cb) => {
+			const allowedOrigins = [`https://${domain}`, 'https://localhost'];
+			if (!origin || allowedOrigins.includes(origin)) {
+				cb(null, true);
+			} else {
+				cb(new Error('Not allowed'), false);
+			}
+		},
+		credentials: true,
+		methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
+	});
+}
+
+function registerCookie(instance) {
+	return instance.register(fastifyCookie, {
+		secret: process.env.COOKIE_SECRET, // for signed cookies (currently unused)
+		parseOptions: {} // options for parsing
+		});
+}
   
-await internalFastify.register(fastifyCookie, {
-    secret: process.env.COOKIE_SECRET,
-    parseOptions: {}
-});
+const fastify = createInstance();
+const internalFastify = createInstance();
+
+await registerCors(fastify);
+await registerCors(internalFastify);
+
+await registerCookie(fastify);
+await registerCookie(internalFastify);
 
 // Register WebSocket plugin
 fastify.register(fastifyWebsocket);
@@ -228,16 +236,37 @@ fastify.post('/api/register', async (request, reply) => {
 
 // **3.5 Add new Google user**
 internalFastify.post('/api/google_register', async (request, reply) => {
+	let result;
+	const { id, name, email, picture } = request.body;
     try {
-		const { id, name, email, picture } = request.body;
-        const result = await dbRun('INSERT INTO users (google_id, nickname, email, avatar_img) VALUES (?, ?, ?, ?)', [id, name, email, picture]);
-        reply.status(201).send({ id: result.lastID, name, email });
-    } catch (err) {
-        if (err.code === 'SQLITE_CONSTRAINT') {
-            return reply.status(400).send({ error: 'Already registered' });
-        }
-        reply.status(500).send({ error: 'Failed to add user' });
-    }
+		result = await dbRun('INSERT INTO users (google_id, nickname, email, avatar_img) VALUES (?, ?, ?, ?)', [id, name, email, picture]);
+	} catch (err) {
+		if (err.code === 'SQLITE_CONSTRAINT') {
+			if (err.message.includes('users.nickname')) {
+				const row = await dbGet('SELECT id FROM users ORDER BY id DESC LIMIT 1');
+				try {
+					result = await dbRun('INSERT INTO users (google_id, nickname, email, avatar_img) VALUES (?, ?, ?, ?)', [id, 'user' + (row.id + 1), email, picture]);
+				} catch (err) {
+					return reply.status(500).send({ error: 'Try signing in with another account registered to a different name' });
+				}
+			}
+			else return reply.status(409).send({ error: 'Email already in use' });
+		}
+		else return reply.status(500).send({ error: 'Failed to add user' });
+	}
+	try {
+		const token = jwt.sign({ id: result.lastID, email }, privateKey, { algorithm: 'RS256', expiresIn: '12h' });
+		reply.setCookie('token', token, {
+			httpOnly: true,
+			secure: true,
+			sameSite: 'Strict',
+			path: '/',
+			maxAge: 60 * 60 * 12 // 12 hours
+		}).send({ success: true });
+	} catch (err) {
+		console.error(err);
+		reply.status(500).send({ error: 'Failed to set cookie' });
+	}
 });
 
 // **4. Update user**
