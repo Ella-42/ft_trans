@@ -137,6 +137,7 @@ const verifyToken = async (request, reply) => {
         if (!token.value) return reply.status(401).send({ error: 'Unauthorized: Invalid token' });
         const decoded = jwt.verify(token.value, publicKey, { algorithms: ['RS256'] });
         request.user = decoded;
+        return ;
     } catch (err) {
         return reply.status(401).send({ error: 'Invalid token' });
     }
@@ -167,6 +168,13 @@ function checkLoginInStatus(request, reply, done) {
     });
 }
 
+fastify.get('/api/users/verifytoken', { preHandler: verifyToken }, async (request, reply) => {
+    try {
+        reply.status(200).send({ message: 'OK' });
+    } catch (err) {
+        reply.status(500).send({ error: 'Failed to verify' });
+    }
+});
 
 // **1. Fetch all users**
 fastify.get('/api/users', { preHandler: verifyToken }, async (request, reply) => {
@@ -392,7 +400,7 @@ fastify.post('/api/login', async (request, reply) => {
     try {
         const user = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
         if (!user || user.password !== password) {
-            return reply.status(401).json({ error: 'Invalid email or password' });
+            return reply.status(401).send({ error: 'Invalid email or password' });
         }
 
         const token = jwt.sign({ id: user.id, email: user.email }, privateKey, { algorithm: 'RS256', expiresIn: '12h' });
