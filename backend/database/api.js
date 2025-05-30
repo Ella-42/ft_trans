@@ -169,8 +169,11 @@ function checkLoginInStatus(request, reply, done) {
 }
 
 fastify.get('/api/users/verifytoken', { preHandler: verifyToken }, async (request, reply) => {
-    try {
+    try { 
+        const user = await dbGet('SELECT id, nickname FROM users WHERE id = ?', [request.user.id]);
+        if (!user) return reply.status(401).send({ error: 'Unauthorized: User not found' });
         reply.status(200).send({ message: 'OK' });
+        return ;
     } catch (err) {
         reply.status(500).send({ error: 'Failed to verify' });
     }
