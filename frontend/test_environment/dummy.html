@@ -215,7 +215,8 @@
 
                     if (!response.ok) {
                         const error = await response.json();
-                        console.error("Login failed:", error);
+                        alert(`Login failed: ${error.error || "Unknown error"}`);
+                        console.error("Login failed:", error.error);
                         return;
                     }
 
@@ -271,6 +272,26 @@
             document.getElementById('friends').innerHTML = '';
         }
 
+        async function checktoken() {
+            try {
+                const res = await fetch('/api/users/verifytoken', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    alert(`Login failed: ${data.error}`);
+                    return;
+                }
+                else {
+                    const data = await res.json().catch(() => ({}));
+                    alert(`Token checked: ${data.message}`);
+                }
+            } catch (err) {
+                alert(`Login failed: ${err.message || "Unknown error"}`);
+            }
+        }
+
         window.addEventListener('load', () => {
             loadUsers();
             currentUser();
@@ -298,6 +319,7 @@
       <label>Password: <input type="password" id="loginpassword" required></label><br>
       <button type="submit">Login</button>
       <button type="button" onclick="logout()">Logout</button>
+      <button type="button" onclick="checktoken()">Check Token</button>
     </form>
 
     <h2>Update User</h2>

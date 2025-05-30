@@ -127,24 +127,38 @@ const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
 
 const verifyToken = async (request, reply) => {
     try {
-        const token = request.cookies.token;
-        if (!token) return reply.status(401).send({ error: 'Unauthorized' });
-        const decoded = jwt.verify(token, publicKey, { algorithms: ['RS256'] });
+        if (!request.cookies.token) {
+            return reply.status(401).send({ error: 'Unauthorized: No token cookies provided' });
+        }
+        const token = request.unsignCookie(request.cookies.token);
+        if (!token.valid) {
+            return reply.status(401).send({ error: 'Unauthorized: Invalid cookie signature' });
+        }
+        if (!token.value) return reply.status(401).send({ error: 'Unauthorized: Invalid token' });
+        const decoded = jwt.verify(token.value, publicKey, { algorithms: ['RS256'] });
         request.user = decoded;
+        return ;
     } catch (err) {
         return reply.status(401).send({ error: 'Invalid token' });
     }
 };
 
 function checkLoginInStatus(request, reply, done) {
-    const token = request.cookies.token;
-  
-    if (!token) {
+    if (!request.cookies.token) {
+        request.user = null;
+        return done();
+    }
+    const token = request.unsignCookie(request.cookies.token);
+    if (!token.valid) {
+          return reply.status(401).send({ error: 'Unauthorized: Invalid cookie signature' });
+    }
+
+    if (!token.value) {
       request.user = null;
       return done();
     }
-  
-    jwt.verify(token, publicKey, { algorithms: ['RS256'] }, (err, user) => {
+
+    jwt.verify(token.value, publicKey, { algorithms: ['RS256'] }, (err, user) => {
       if (err) {
         request.user = null;
       } else {
@@ -152,8 +166,18 @@ function checkLoginInStatus(request, reply, done) {
       }
       done();
     });
-  }
+}
 
+fastify.get('/api/users/verifytoken', { preHandler: verifyToken }, async (request, reply) => {
+    try { 
+        const user = await dbGet('SELECT id, nickname FROM users WHERE id = ?', [request.user.id]);
+        if (!user) return reply.status(401).send({ error: 'Unauthorized: User not found' });
+        reply.status(200).send({ message: 'OK' });
+        return ;
+    } catch (err) {
+        reply.status(500).send({ error: 'Failed to verify' });
+    }
+});
 
 // **1. Fetch all users**
 fastify.get('/api/users', { preHandler: verifyToken }, async (request, reply) => {
@@ -379,11 +403,12 @@ fastify.post('/api/login', async (request, reply) => {
     try {
         const user = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
         if (!user || user.password !== password) {
-            return reply.status(401).json({ error: 'Invalid email or password' });
+            return reply.status(401).send({ error: 'Invalid email or password' });
         }
 
         const token = jwt.sign({ id: user.id, email: user.email }, privateKey, { algorithm: 'RS256', expiresIn: '12h' });
         reply.setCookie('token', token, {
+          signed: true,
           httpOnly: true,
           secure: true,
           sameSite: 'Strict',
