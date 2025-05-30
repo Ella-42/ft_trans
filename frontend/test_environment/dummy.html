@@ -6,15 +6,10 @@
     <title>User Management</title>
     <script>
         async function loadUsers() {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                console.error("No token found");
-                return;
-            }
             const res = await fetch('/api/users', {
                 method: 'GET',
+                credentials: 'include',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
@@ -45,11 +40,6 @@
             loadUsers();
         }
         async function updateUser() {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                console.error("No token found");
-                return;
-            }
             const name = document.getElementById('newname').value;
             const email = document.getElementById('newemail').value;
             const password = document.getElementById('newpassword').value;
@@ -61,7 +51,8 @@
             }
             const res = await fetch(`/api/users/${id}`, {
                 method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, email, password })
             });
 
@@ -75,15 +66,10 @@
         }
 
         async function deleteUser(id) {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                console.error("No token found");
-                return;
-            }
             await fetch(`/api/users/${id}`, {
                 method: 'DELETE' ,
+                credentials: 'include',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({})
@@ -93,15 +79,10 @@
         }
 
         async function loadFriends(id) {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                console.error("No token found");
-                return;
-            }
             const res = await fetch(`/api/users/${id}/friends`, {
                 method: 'GET',
+                credentials: 'include',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
@@ -116,18 +97,10 @@
 
         async function showFriends() {
             const id = document.getElementById('toshow').value;
-            const token = localStorage.getItem('token');
-            if (!token) {
-                console.error("No token found");
-                alert('Error showing friend list: Not logged in');
-                const list = document.getElementById('friends');
-                list.innerHTML = '';
-                return;
-            }
             const res = await fetch(`/api/users/${id}/friends`, {
                 method: 'GET',
+                credentials: 'include',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
@@ -148,11 +121,6 @@
         }
 
         async function updateFriend() {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                console.error("No token found");
-                return;
-            }
             const friendid = document.getElementById('friend').value;
             const id = document.getElementById('owner').value;
 
@@ -166,7 +134,8 @@
             }
             const res = await fetch(`/api/users/${id}/friends`, {
                 method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ friendid })
             });
 
@@ -179,25 +148,16 @@
         }
 
         async function deleteFriend(id, friendid) {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                console.error("No token found");
-                return;
-            }
             await fetch(`/api/users/${id}/friends`, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ friendid })
             });
             loadFriends(id);
         }
 
         async function updateAvatar() {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                console.error("No token found");
-                return;
-            }
             const avatar_img = document.getElementById('avatar_img').value;
             const id = document.getElementById('avatarid').value;
 
@@ -211,7 +171,8 @@
             }
             const res = await fetch(`/api/users/${id}/avatar`, {
                 method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ avatar_img })
             });
 
@@ -258,8 +219,6 @@
                         return;
                     }
 
-                    const token = await response.text();
-                    localStorage.setItem('token', token);
                     console.log("Logged in successfully!");
                     currentUser();
                     loadUsers();
@@ -289,11 +248,10 @@
         }
 */
         async function currentUser() {
-            const token = localStorage.getItem('token');
             const res = await fetch('/api/whoami', {
                 method: 'GET',
+                credentials: 'include',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
@@ -302,10 +260,15 @@
             list.innerHTML = `${users.nickname}`;
         }
 
-        function logout() {
-            localStorage.removeItem('token');
+        async function logout() {
+            await fetch('/api/logout', {
+                method: 'POST',
+                credentials: 'include'
+            });
             console.log("User logged out.");
             currentUser();
+            document.getElementById('users').innerHTML = '';
+            document.getElementById('friends').innerHTML = '';
         }
 
         window.addEventListener('load', () => {
