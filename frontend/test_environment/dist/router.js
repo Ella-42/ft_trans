@@ -4,11 +4,13 @@ import { renderLogin } from "./src/pages/Login.js";
 import { renderRegister } from "./src/pages/Register.js";
 import { attachRegisterFormListener } from './src/pages/Register.js';
 import { attachLoginFormListener } from './src/pages/Login.js';
+import { renderDashboard } from './src/pages/Dashboard.js';
 const routes = {
     "/safe": renderHomePage,
     "/safe/login": renderLogin,
     "/safe/cookie-policy": renderCookiePolicy,
     "/safe/register": renderRegister,
+    "/safe/dashboard": renderDashboard,
 };
 export const navigateTo = (url) => {
     history.pushState({}, "", url);
