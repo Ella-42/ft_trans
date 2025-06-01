@@ -5,6 +5,7 @@ import { renderRegister } from "./src/pages/Register.js";
 import { attachRegisterFormListener } from './src/pages/Register.js';
 import { attachLoginFormListener } from './src/pages/Login.js';
 import { renderDashboard } from './src/pages/Dashboard.js';
+import { getCookie } from './src/tools/helper.js
 
 const routes: { [key: string]: () => string } = {
     "/safe": renderHomePage,
@@ -30,6 +31,35 @@ export const router = () => {
         console.error("❌ ERROR: <div id='app'> NOT FOUND!");
         return;
     }
+
+    if (path === "/safe/dashboard") {
+	const token = getCookie("token");
+	if (!token) {
+		alert("You must be logged in to acces the dashboard");
+		return navigateTo("/safe/login");
+	}
+
+	try {
+        	const response = await fetch("https://your-api-domain.com/api/verify", {
+			method: "POST",
+			headers: {
+                    		"Content-Type": "application/json",
+                    		"Authorization": `Bearer ${token}`,
+			},
+        	});
+
+		if (!response.ok) {
+        		throw new Error("Invalid token");
+		}
+
+		app.innerHTML = renderDashboard();
+		return;
+        } catch (err) {
+		console.error("❌ Token verification failed:", err);
+		alert("Session expired or invalid. Please log in again.");
+		return navigateTo("/safe/login");
+        	}
+	}
 
     //setTimeout(attachMenuListener, 0);
     //setTimeout(attachRegisterFormListener, 0);
