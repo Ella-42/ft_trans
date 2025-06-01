@@ -5,14 +5,16 @@ import { renderRegister } from "./src/pages/Register.js";
 import { attachRegisterFormListener } from './src/pages/Register.js';
 import { attachLoginFormListener } from './src/pages/Login.js';
 import { renderDashboard } from './src/pages/Dashboard.js';
-import { getCookie } from './src/tools/helper.js
+import { attachDashboardListener } from './src/pages/Dashboard.js'
+import { getCookie } from './src/tools/helper.js'
+
+declare const axios: any;
 
 const routes: { [key: string]: () => string } = {
     "/safe": renderHomePage,
     "/safe/login": renderLogin,
     "/safe/cookie-policy": renderCookiePolicy,
     "/safe/register": renderRegister,
-    "/safe/dashboard": renderDashboard,
 
 };
 
@@ -21,7 +23,7 @@ export const navigateTo = (url: string) => {
     router(); // Re-render the page
 };
 
-export const router = () => {
+export const router = async () => {
     console.log("🚀 Router function is running!");
     const path = window.location.pathname;
     console.log("The current path is:", path);
@@ -33,33 +35,27 @@ export const router = () => {
     }
 
     if (path === "/safe/dashboard") {
-	const token = getCookie("token");
-	if (!token) {
-		alert("You must be logged in to acces the dashboard");
-		return navigateTo("/safe/login");
-	}
-
 	try {
-        	const response = await fetch("https://your-api-domain.com/api/verify", {
-			method: "POST",
-			headers: {
-                    		"Content-Type": "application/json",
-                    		"Authorization": `Bearer ${token}`,
-			},
-        	});
-
-		if (!response.ok) {
-        		throw new Error("Invalid token");
+		const res = await axios.get('https://trans.ella-peeters.me/api/users/verifytoken', {
+			withCredentials: true
+		});
+		console.log("The response in dashboard  is: ", res);
+		if (res.data.message === 'OK') {
+			const user = res.data;
+			console.log("The user is: ", user);
+			const page = renderDashboard(user);
+			app.innerHTML = page;
+            		attachMenuListener();
+			attachDashboardListener();
+        		return;
 		}
-
-		app.innerHTML = renderDashboard();
-		return;
-        } catch (err) {
-		console.error("❌ Token verification failed:", err);
-		alert("Session expired or invalid. Please log in again.");
-		return navigateTo("/safe/login");
-        	}
 	}
+	catch (error) {
+		console.error('Token verification failed: ', error);
+		navigateTo('/safe/login');
+		return ;
+	}
+    }
 
     //setTimeout(attachMenuListener, 0);
     //setTimeout(attachRegisterFormListener, 0);

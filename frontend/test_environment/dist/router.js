@@ -5,18 +5,18 @@ import { renderRegister } from "./src/pages/Register.js";
 import { attachRegisterFormListener } from './src/pages/Register.js';
 import { attachLoginFormListener } from './src/pages/Login.js';
 import { renderDashboard } from './src/pages/Dashboard.js';
+import { attachDashboardListener } from './src/pages/Dashboard.js';
 const routes = {
     "/safe": renderHomePage,
     "/safe/login": renderLogin,
     "/safe/cookie-policy": renderCookiePolicy,
     "/safe/register": renderRegister,
-    "/safe/dashboard": renderDashboard,
 };
 export const navigateTo = (url) => {
     history.pushState({}, "", url);
     router(); // Re-render the page
 };
-export const router = () => {
+export const router = async () => {
     console.log("🚀 Router function is running!");
     const path = window.location.pathname;
     console.log("The current path is:", path);
@@ -24,6 +24,28 @@ export const router = () => {
     if (!app) {
         console.error("❌ ERROR: <div id='app'> NOT FOUND!");
         return;
+    }
+    if (path === "/safe/dashboard") {
+        try {
+            const res = await axios.get('https://trans.ella-peeters.me/api/users/verifytoken', {
+                withCredentials: true
+            });
+            console.log("The response in dashboard  is: ", res);
+            if (res.data.message === 'OK') {
+                const user = res.data;
+                console.log("The user is: ", user);
+                const page = renderDashboard(user);
+                app.innerHTML = page;
+                attachMenuListener();
+                attachDashboardListener();
+                return;
+            }
+        }
+        catch (error) {
+            console.error('Token verification failed: ', error);
+            navigateTo('/safe/login');
+            return;
+        }
     }
     //setTimeout(attachMenuListener, 0);
     //setTimeout(attachRegisterFormListener, 0);

@@ -3,19 +3,42 @@ import { renderFooter } from '../components/Footer.js'
 import { renderLoggedInNavBar } from '../components/LoggedInNavBar.js';
 //import { renderFriends } from '../components/Friends';
 //import { renderRecentMatches } from '../components/RecentMatches';
+import { User } from '../interfaces/user';
+declare const axios: any;
 
 const date = new Date().toLocaleDateString('en-us', {weekday: "long", month: "short", day: "numeric"});
 
-export const renderDashboard = (): string => {
+export const attachDashboardListener = async () => {
+	console.log("The attachDashboardistener runs");
+	
+	try
+	{
+		console.log("test007");
+		const response = await axios.get('https://trans.ella-peeters.me/api/whoami');
+		console.log("The reponse after logging in is: ", response);
+		const user = response.data;
+		//const greetingElement = document.getElementById('username-greeting');
+		//
+		//if (greetingElement && username) {
+		//	greetingElement.textContent = `Hi, ${username} 👋`;
+		//}
+	} catch (error)
+	{
+		console.error("The error is: ", error);
+	}
+
+	};
+
+export const renderDashboard = (user: User): string => {
 	return `
 	<section class="flex">
 		${renderLoggedInSideBar()}
 		<section class="flex flex-col w-full">
-			${renderLoggedInNavBar()}
+			${renderLoggedInNavBar(user)}
 			<section class="bg-primary-background text-white">
 				<div class="container px-5 flex flex-col">
 					<div class="px-10 py-5 rounded-xl my-5 bg-gray-900 flex justify-between items-center">
-						<p class="font-extralight text-xl">Hi, pclaus 👋</p>
+						<p class="font-extralight text-xl" id="username-greeting">Hi, ${user.nickname} 👋</p>
 						<p class="font-extralight">${date}</p>
 					</div>
 					<div>

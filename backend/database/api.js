@@ -172,7 +172,7 @@ fastify.get('/api/users/verifytoken', { preHandler: verifyToken }, async (reques
     try { 
         const user = await dbGet('SELECT id, nickname FROM users WHERE id = ?', [request.user.id]);
         if (!user) return reply.status(401).send({ error: 'Unauthorized: User not found' });
-        reply.status(200).send({ message: 'OK' });
+        reply.status(200).send({ message: 'OK', id: user.id, nickname: user.nickname });
         return ;
     } catch (err) {
         reply.status(500).send({ error: 'Failed to verify' });
@@ -516,7 +516,7 @@ fastify.get('/api/whoami', { preHandler: checkLoginInStatus }, async (request, r
         if (!user) {
             return reply.send({ nickname: "guest" });
         }
-        return reply.send({ nickname: user.nickname });
+        return reply.send({ nickname: user.nickname, id: user.id });
     } catch (err) {
         reply.status(500).send({ error: 'Failed to fetch username' });
     }
