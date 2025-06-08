@@ -45,8 +45,9 @@ export const router = async () => {
 			console.log("The user is: ", user);
 			const page = renderDashboard(user);
 			app.innerHTML = page;
-            		attachMenuListener();
+            		attachLoggedInMenuListener();
 			attachDashboardListener();
+			attachLogoutListener();
         		return;
 		}
 	}
@@ -75,7 +76,9 @@ window.addEventListener("popstate", router);
 
 const attachMenuListener = () => {
 	const mobileMenuButton = document.querySelector(".mobile-menu-button");
+	console.log("The menu button: ", mobileMenuButton);
 	const mobileMenu = document.querySelector(".navigation-menu");
+	console.log("The mobile menu is: ", mobileMenu);
 	console.log("The listener function for the menu runs");
 
 	mobileMenuButton.addEventListener("click", () => {
@@ -84,6 +87,32 @@ const attachMenuListener = () => {
 	})
 };
 
+const attachLoggedInMenuListener = () => {
+	const mobileMenuButtonLoggedIn = document.querySelector(".mobile-menu-button-logged-in");
+	console.log("The menu button: ", mobileMenuButtonLoggedIn);
+	const mobileMenuLoggedIn = document.querySelector(".navigation-menu-logged-in");
+	console.log("The mobile menu is: ", mobileMenuLoggedIn);
+	console.log("The listener function for the logged in menu runs");
+
+	mobileMenuButtonLoggedIn.addEventListener("click", () => {
+			if (mobileMenuLoggedIn)
+				mobileMenuLoggedIn.classList.toggle("hidden");
+	})
+};
+
+const attachLogoutListener = async () => {
+	console.log("The logout listener runs");
+	const logoutButton = document.querySelector("#logout-btn");
+	console.log("The logout button is: ", logoutButton);
+	logoutButton.addEventListener("click", async () => {
+		try {
+			await axios.post('https://trans.ella-peeters.me/api/logout');
+			navigateTo('/safe');
+		} catch (error)	{
+			console.error("The error is: ", error);
+		}
+	})
+}
 //const attachRegisterFormListener = () => {
 //	const registerForm = document.querySelector("#registerForm");
 //	console.log("The listener function for the form runs");

@@ -1,6 +1,6 @@
 export function renderLoggedInSideBar() {
     return `
-		<nav class="flex-col bg-gray-900 max-w-xs">
+		<nav class="flex-col bg-gray-900 w-56 hidden md:flex">
 				<div class="flex items-center justify-between px-6 py-4">
 					<a href="/" class="py-1"><img class="h-16" src="../safe/public/pong-logo-png.png"></img></a>
 					<div class="cursor-pointer md:hidden flex items-center mobile-menu-button">
@@ -9,12 +9,12 @@ export function renderLoggedInSideBar() {
 						</svg>
 					</div>
 				</div>
-				<div class="hidden flex md:flex flex-col pb-5 px-7 navigation-menu">
-					<a data-link href="/dashboard" class="text-xl md:text-base py-2 text-white hover:pl-7 hover:text-gray-400">Dashboard</a>
-					<a data-link href="/matchmaking" class="text-xl md:text-base py-2 text-white hover:text-gray-400">Matchmaking</a>
-					<a data-link href="/tournament" class="text-xl md:text-base py-2 text-white hover:text-gray-400">Tournament</a>
-					<a data-link href="/profile" class="text-xl md:text-base py-2 text-white hover:text-gray-400">Profile</a>
-					<a data-link href="/stats" class="text-xl md:text-base py-2 text-white hover:text-gray-400">Stats</a>
+				<div class="hidden flex md:flex flex-col pb-5 px-7">
+					<a data-link href="/dashboard" class="text-xl md:text-base py-2 text-white hover:pl-3 hover:text-gray-400">Dashboard</a>
+					<a data-link href="/matchmaking" class="text-xl md:text-base py-2 text-white hover:pl-3 hover:text-gray-400">Matchmaking</a>
+					<a data-link href="/tournament" class="text-xl md:text-base py-2 text-white hover:pl-3 hover:text-gray-400">Tournament</a>
+					<a data-link href="/profile" class="text-xl md:text-base py-2 text-white hover:pl-3 hover:text-gray-400">Profile</a>
+					<a data-link href="/stats" class="text-xl md:text-base py-2 text-white hover:pl-3 hover:text-gray-400">Stats</a>
 				</div>
 		</nav>
   `;
