@@ -109,3 +109,11 @@ export const usernameValidation = (data) => {
     }
     return true;
 };
+export const invalidLogin = () => {
+    Swal.fire({
+        title: "Error!",
+        text: "The username and/or login are incorrect!",
+        icon: 'error',
+    });
+    return false;
+};

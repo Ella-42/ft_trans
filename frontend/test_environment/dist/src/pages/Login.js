@@ -1,7 +1,7 @@
 import { renderNavBar } from '../components/NavBar.js';
 import { renderFooter } from '../components/Footer.js';
 import { navigateTo } from '../../router.js';
-import { emailValidation, loginPasswordValidation } from '../tools/dataValidation.js';
+import { emailValidation, loginPasswordValidation, invalidLogin } from '../tools/dataValidation.js';
 export const attachLoginFormListener = () => {
     const loginForm = document.querySelector('#loginForm');
     console.log("The attachLoginFormListener runs");
@@ -19,7 +19,6 @@ export const attachLoginFormListener = () => {
         if (!loginPasswordValidation(password))
             return;
         try {
-            console.log("test1");
             const response = await axios.post('https://trans.ella-peeters.me/api/login', {
                 email: String(email),
                 password: String(password),
@@ -34,6 +33,7 @@ export const attachLoginFormListener = () => {
         }
         catch (error) {
             console.error("The error is: ", error);
+            invalidLogin();
         }
     });
 };
