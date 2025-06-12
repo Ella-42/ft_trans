@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pong Frontend Test</title>
+  <style>
+    canvas {
+      background: #000;
+      display: block;
+      margin: 2rem auto;
+      border: 2px solid #fff;
+    }
+    body {
+      text-align: center;
+      color: white;
+      background-color: #222;
+      font-family: sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <h1>Pong Frontend Test</h1>
+  <p id="status">Connecting...</p>
+  <canvas id="gameCanvas" width="500" height="500"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    let socket = null;
+    let paddleNumber = null;
+    let gameOver = false;
+
+    function draw(game) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Ball
+      ctx.beginPath();
+      ctx.arc(game.ballX, game.ballY, 12.5, 0, 2 * Math.PI);
+      ctx.fillStyle = 'white';
+      ctx.fill();
+
+      // Paddles
+      ctx.fillStyle = 'white';
+      ctx.fillRect(game.paddle1.x, game.paddle1.y, game.paddle1.width, game.paddle1.height);
+      ctx.fillRect(game.paddle2.x, game.paddle2.y, game.paddle2.width, game.paddle2.height);
+
+      // Scores
+      ctx.font = '20px sans-serif';
+      ctx.fillText(`P1: ${game.player1Score}`, 50, 30);
+      ctx.fillText(`P2: ${game.player2Score}`, canvas.width - 100, 30);
+    }
+
+    async function currentId() {
+      const res = await fetch('/api/whoami', {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+              'Content-Type': 'application/json'
+          }
+      });
+      const users = await res.json();
+      return (users.id);
+    }
+
+    function connect() {
+      socket = new WebSocket(`wss://${location.hostname}/ws`);
+
+      socket.onopen = () => {
+        document.getElementById('status').textContent = 'Connected - Joining...';
+        socket.send(JSON.stringify({ type: 'auto_join' }));
+      };
+
+      socket.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'joined') {
+          paddleNumber = msg.paddleNumber;
+          document.getElementById('status').textContent = `Joined room ${msg.roomId} as player ${msg.paddleNumber}`;
+        } else if (msg.type === 'waiting_ready') {
+          socket.send(JSON.stringify({ type: 'ready', roomId: msg.roomId }));
+        } else if (msg.type === 'ready_ack') {
+          document.getElementById('status').textContent = 'Ready. Waiting for game start...';
+        } else if (msg.type === 'game_start') {
+          document.getElementById('status').textContent = `Game started! You are player ${paddleNumber}`;
+        } else if (msg.type === 'game_tick') {
+          draw(msg.state);
+        } else if (msg.type === 'game_over') {
+          gameOver = true;
+          currentId().then(currentUserId => {
+            const isWinner = msg.winner.id === currentUserId;
+            if (isWinner) {
+              document.getElementById('status').textContent = `Game Over! You WIN! Winner: ${msg.winner.id}`;
+            } else {
+              document.getElementById('status').textContent = `Game Over! You LOSE! Winner: ${msg.winner.id}`;
+            }
+          });
+        } else if (msg.type === 'room_closed') {
+          document.getElementById('status').textContent = `Room closed: ${msg.reason}`;
+        } else if (msg.type === 'reconnected') {
+          paddleNumber = msg.paddleNumber;
+          document.getElementById('status').textContent = `Reconnected to room ${msg.roomId}`;
+        }
+      };
+
+      socket.onclose = () => {
+        if (!gameOver) {
+          document.getElementById('status').textContent = 'Disconnected';
+        }
+      };
+
+      socket.onerror = (err) => {
+        console.error('WebSocket error:', err);
+      };
+    }
+
+    // Send paddle movement with arrow keys
+    window.addEventListener('keydown', (e) => {
+      if (!socket || socket.readyState !== WebSocket.OPEN) return;
+      if (e.key === 'ArrowUp') {
+        socket.send(JSON.stringify({ type: 'move', direction: 'up' }));
+      } else if (e.key === 'ArrowDown') {
+        socket.send(JSON.stringify({ type: 'move', direction: 'down' }));
+      }
+    });
+
+    connect();
+  </script>
+</body>
+</html>

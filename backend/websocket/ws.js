@@ -1,0 +1,352 @@
+import jwt from 'jsonwebtoken';
+
+import Fastify from 'fastify';
+import websocket from '@fastify/websocket';
+import { v4 as uuidv4 } from 'uuid';
+import { Mutex } from 'async-mutex';
+import cookie from '@fastify/cookie';
+const roomMutex = new Mutex();
+const readyMutex = new Mutex();
+const oripublicKey = process.env.PUBLIC_KEY;
+if (!oripublicKey) {
+  throw new Error("Missing PUBLIC_KEY environment variable");
+}
+const publicKey = oripublicKey.replace(/\\n/g, '\n');
+
+
+const fastify = Fastify();
+fastify.register(websocket);
+
+await fastify.register(cookie, {
+  secret: process.env.COOKIE_SECRET,
+  parseOptions: {}
+});
+
+const rooms = {}; // format: { roomId: { players: [{ id, conn }], ready: Set, gameStarted: bool, game[{....}], gameLoopInterval } }
+
+function findRoomByPlayerId(playerId) {
+  for (const [roomId, room] of Object.entries(rooms)) {
+    if (room.players.some(player => player.id === playerId)) {
+      return room;
+    }
+  }
+  return null;
+}
+
+fastify.get('/ws', { websocket: true }, async (conn, req) => {
+  try {
+    const cookies = cookie.parse(req.headers.cookie || '');
+    const tokenCookie = cookies.token;
+
+    const token = fastify.unsignCookie(tokenCookie);
+    if (!token.valid || !token.value) {
+      conn.socket.close();
+      return;
+    }
+    let decoded;
+    try {
+      decoded = jwt.verify(token.value, publicKey, { algorithms: ['RS256'] });
+    } catch (err) {
+      conn.socket.close();
+      return;
+    }
+    conn.userId = decoded.id;
+  } catch (err) {
+    conn.socket.close();
+    return;
+  }
+
+  conn.socket.on('message', async (message) => {
+    try {
+      const msg = JSON.parse(message.toString());
+      if (typeof msg !== 'object' || typeof msg.type !== 'string') return;
+
+      if (!conn.userId) {
+        conn.socket.close();
+        return;
+      }
+
+      const { type, roomId } = msg;
+
+      if (type === 'auto_join') {
+        await handleAutoJoin(conn, conn.userId);
+      } else if (type === 'ready') {
+        await handleReady(roomId, conn.userId, conn);
+      } else if (type === 'move') {
+        const room = findRoomByPlayerId(conn.userId);
+        const sender = room.players.find(player => player.conn === conn);
+        if (!sender) return;
+
+        const paddle = sender.paddleNumber === 1 ? room.game.paddle1 : room.game.paddle2;
+
+        if (msg.direction === "up" && paddle.y > 0) {
+          paddle.y -= PADDLE_SPEED;
+        } else if (msg.direction === "down" && paddle.y < GAME_HEIGHT - paddle.height) {
+          paddle.y += PADDLE_SPEED;
+        }
+      }
+    } catch (err) {
+      console.error('Message error:', err);
+    }
+  });
+
+  conn.socket.on('close', () => {
+    const room = findRoomByPlayerId(conn.userId);
+    if (room) {
+      const otherPlayer = room.players.find(p => p.id !== conn.userId);
+      if (room.gameStarted === false) {
+        // Notify other player if still connected
+        if (otherPlayer && otherPlayer.conn && otherPlayer.conn.socket.readyState === 1) {
+          otherPlayer.conn.socket.send(JSON.stringify({
+            type: 'room_closed',
+            reason: 'Opponent disconnected',
+          }));
+          otherPlayer.conn.socket.close();
+        }
+        delete rooms[Object.keys(rooms).find(id => rooms[id] === room)];
+      }
+      else {
+        const player = room.players.find(p => p.id === conn.userId);
+        if (player) {
+          player.conn = null;
+          console.log(`Player ${conn.userId} disconnected`);
+        }
+      }
+    }
+  });
+});
+
+// Game logic below
+
+const FRAME_RATE = 1000 / 60;
+const GAME_WIDTH = 500;
+const GAME_HEIGHT = 500;
+const BALL_RADIUS = 12.5;
+const PADDLE_SPEED = 50;
+
+function createGame() {
+    let ballSpeed = 3; // if level needs to be implemented, this variable should be changed
+    const ballXDirection = Math.random() < 0.5 ? 1 : -1;
+    const ballYDirection = (Math.random() - 0.5) * 2;
+    return {
+        ballX: GAME_WIDTH / 2,
+        ballY: GAME_HEIGHT / 2,
+        ballSpeed,
+        ballXDirection,
+        ballYDirection,
+        player1Score: 0,
+        player2Score: 0,
+        paddle1: { x: 0, y: (GAME_HEIGHT - 100) / 2, width: 25, height: 100 },
+        paddle2: { x: GAME_WIDTH - 25, y: (GAME_HEIGHT - 100) / 2, width: 25, height: 100 },
+    };
+}
+
+function updateGame(game) {
+    const {
+        ballXDirection, ballYDirection, ballSpeed,
+        paddle1, paddle2
+    } = game;
+
+    game.ballX += ballXDirection * ballSpeed;
+    game.ballY += ballYDirection * ballSpeed;
+
+    // Wall collisions
+    if (game.ballY <= 0 + BALL_RADIUS || game.ballY >= GAME_HEIGHT - BALL_RADIUS)
+        game.ballYDirection *= -1;
+
+    // Score left/right
+    if (game.ballX <= 0) {
+        game.player2Score++;
+        const player1Score = game.player1Score;
+        const player2Score = game.player2Score;
+        Object.assign(game, createGame());
+        game.player1Score = player1Score;
+        game.player2Score = player2Score;
+    } else if (game.ballX >= GAME_WIDTH) {
+        game.player1Score++;
+        const player1Score = game.player1Score;
+        const player2Score = game.player2Score;
+        Object.assign(game, createGame());
+        game.player1Score = player1Score;
+        game.player2Score = player2Score;
+    }
+
+    // Paddle collisions
+    if (game.ballX <= (paddle1.x + paddle1.width + BALL_RADIUS) &&
+        game.ballY > paddle1.y && game.ballY < paddle1.y + paddle1.height) {
+        game.ballX = paddle1.x + paddle1.width + BALL_RADIUS;
+        game.ballXDirection *= -1;
+        game.ballSpeed += 0.5;
+    }
+
+    if (game.ballX >= (paddle2.x - BALL_RADIUS) &&
+        game.ballY > paddle2.y && game.ballY < paddle2.y + paddle2.height) {
+        game.ballX = paddle2.x - BALL_RADIUS;
+        game.ballXDirection *= -1;
+        game.ballSpeed += 0.5;
+    }
+}
+
+//Room handling below
+
+async function handleAutoJoin(conn, playerId) {
+  //check for reconnection of disconnected users
+  const existingRoomId = Object.keys(rooms).find(rid =>
+    rooms[rid].players.find(p => p.id === playerId)
+  );
+  
+  if (existingRoomId) {
+    const room = rooms[existingRoomId];
+    const player = room.players.find(p => p.id === playerId);
+    if (player.conn === null) {
+      player.conn = conn;
+      player.conn.socket.send(JSON.stringify({ type: 'reconnected', roomId: existingRoomId, paddleNumber: player.paddleNumber }));
+      return;
+    } else {
+      conn.socket.send(JSON.stringify({ type: 'error', message: 'Player has active game session.' }));
+      return;
+    }
+  }
+  let roomId, room, paddleNumber;
+  //find existing room with one player
+  await roomMutex.runExclusive(() => {
+    roomId = Object.keys(rooms).find(rid =>
+      rooms[rid].players.length <= 1 && !rooms[rid].gameStarted
+    );
+
+    if (!roomId) {
+      roomId = uuidv4();
+      rooms[roomId] = { players: [], ready: new Set(), gameStarted: false, game: createGame() };
+    }
+
+    room = rooms[roomId];
+    if (room.players.find(p => p.id === playerId)) {
+      conn.socket.send(JSON.stringify({ type: 'error', message: 'Player already joined' }));
+      return;
+    }
+
+    paddleNumber = room.players.length === 0 ? 1 : 2;
+    if (room.players.length >= 2) {
+      conn.socket.send(JSON.stringify({ type: 'error', message: 'Room full' }));
+      return;
+    }
+    room.players.push({ id: playerId, conn, paddleNumber });
+
+  }).catch(err => {
+    console.error('Error in handleAutoJoin:', err);
+  });
+  conn.socket.send(JSON.stringify({ type: 'joined', roomId, paddleNumber }));
+
+  if (room.players.length === 2) {
+    room.players.forEach(p => {
+      p.conn.socket.send(JSON.stringify({ type: 'waiting_ready', roomId }));
+    });
+  }
+}
+
+async function handleReady(roomId, playerId, conn) {
+  const room = rooms[roomId];
+  if (!room || room.gameStarted) return;
+  await readyMutex.runExclusive(() => {
+    const playerInRoom = room.players.some(p => p.id === playerId);
+    if (playerInRoom) {
+      room.ready.add(playerId);
+    }
+  });
+  if (conn.socket.readyState === 1) {
+    conn.socket.send(JSON.stringify({ type: 'ready_ack', roomId, playerId, status: 'ok' }));
+  }
+  if (room.ready.size === 2) {
+    room.gameStarted = true;
+    startGame(roomId);
+  }
+}
+
+function startGame(roomId) {
+  const room = rooms[roomId];
+  console.log(`Starting game in room ${roomId}`);
+
+  room.players.forEach(p => {
+    if (p.conn && p.conn.socket.readyState === 1) {
+      p.conn.socket.send(JSON.stringify({ type: 'game_start' }));
+    }
+  });
+  
+  room.gameLoopInterval = setInterval(() => {
+      updateGame(room.game);
+      if (room.game.player1Score >= 11 || room.game.player2Score >= 11) {
+        if (room.game.player1Score > room.game.player2Score &&
+          room.game.player1Score - room.game.player2Score >= 2) {
+          clearInterval(room.gameLoopInterval);
+          const winner = room.players.find(player => player.paddleNumber === 1);
+          room.players.forEach(p => {
+            if (p.conn && p.conn.socket.readyState === 1) {
+              p.conn.socket.send(JSON.stringify({
+                type: 'game_over',
+                winner: { id: winner.id }, //nickname has to be included later
+              }));
+            }
+          });
+          //save result yet to be implemented
+          room.players.forEach(p => p.conn.socket.close());
+          delete rooms[roomId];
+        }
+        else if (room.game.player2Score > room.game.player1Score &&
+          room.game.player2Score - room.game.player1Score >= 2) {
+          clearInterval(room.gameLoopInterval);
+          const winner = room.players.find(player => player.paddleNumber === 2);
+          room.players.forEach(p => {
+            if (p.conn && p.conn.socket.readyState === 1) {
+              p.conn.socket.send(JSON.stringify({
+                type: 'game_over',
+                winner: { id: winner.id }, //nickname has to be included later
+              }));
+            }
+          });
+          //save result yet to be implemented
+          room.players.forEach(p => p.conn.socket.close());
+          delete rooms[roomId];
+        }
+      }
+      room.players.forEach(p => {
+        if (p.conn && p.conn.socket.readyState === 1) {
+          p.conn.socket.send(JSON.stringify({ type: "game_tick", state: room.game }));
+        }
+      });
+  }, FRAME_RATE);
+
+};
+
+fastify.addHook('onClose', async (instance, done) => {
+  for (const roomId in rooms) {
+    clearInterval(rooms[roomId].gameLoopInterval);
+  }
+  done();
+});
+
+fastify.listen({ port: 3330, host: '0.0.0.0' }, () => {
+  console.log('Server listening on http://localhost:3330');
+  setInterval(() => {
+    for (const [roomId, room] of Object.entries(rooms)) {
+      const allDisconnected = room.players.every(
+        p => !p.conn || p.conn.socket.readyState !== 1
+      );
+
+      if (allDisconnected) {
+        console.log(`Cleaning up room ${roomId} (all players disconnected)`);
+
+        if (room.gameLoopInterval) {
+          clearInterval(room.gameLoopInterval);
+        }
+
+        room.players.forEach(p => {
+          try {
+            p.conn?.socket?.close();
+          } catch (_) {}
+        });
+
+        delete rooms[roomId];
+      }
+    }
+  }, 5 * 60 * 1000); //remove abandoned rooms every 5 minutes
+});

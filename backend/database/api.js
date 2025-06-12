@@ -509,14 +509,14 @@ fastify.delete('/api/users/:id/friends', { preHandler: verifyToken }, async (req
 fastify.get('/api/whoami', { preHandler: checkLoginInStatus }, async (request, reply) => {
     try {
         if (!request.user) {
-            return reply.send({ nickname: "guest" });
+            return reply.send({ nickname: "guest", id: -1 });
         }
         const id = request.user.id;
         const user = await dbGet('SELECT nickname FROM users WHERE id = ?', [id]);
         if (!user) {
-            return reply.send({ nickname: "guest" });
+            return reply.send({ nickname: "guest", id: -1 });
         }
-        return reply.send({ nickname: user.nickname });
+        return reply.send({ nickname: user.nickname, id: id });
     } catch (err) {
         reply.status(500).send({ error: 'Failed to fetch username' });
     }
