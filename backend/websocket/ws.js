@@ -107,7 +107,7 @@ fastify.get('/ws', { websocket: true }, async (conn, req) => {
       }
       else {
         const player = room.players.find(p => p.id === conn.userId);
-        if (player) {
+        if (player?.conn?.socket === conn.socket) {
           player.conn = null;
           console.log(`Player ${conn.userId} disconnected`);
         }
@@ -203,7 +203,12 @@ async function handleAutoJoin(conn, playerId) {
       player.conn.socket.send(JSON.stringify({ type: 'reconnected', roomId: existingRoomId, paddleNumber: player.paddleNumber }));
       return;
     } else {
-      conn.socket.send(JSON.stringify({ type: 'error', message: 'Player has active game session.' }));
+      try {
+        conn.socket.send(JSON.stringify({ type: 'error', message: 'Player has active game session.' }));
+        conn.socket.close();
+      } catch (err) {
+        console.error('Failed to close duplicate connection from same user:', err);
+      }
       return;
     }
   }
@@ -262,6 +267,27 @@ async function handleReady(roomId, playerId, conn) {
   }
 }
 
+async function getNick(uid)
+{
+    const res = await fetch(`http://database:3443/api/users/${uid}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      console.log(`Error getting nickname: ${error.error || "Unknown error"}`);
+      return 'null';
+    }
+    const user = await res.json();
+    if (user && user.nickname)
+      return user.nickname;
+    else
+      return 'null';
+}
+
 function startGame(roomId) {
   const room = rooms[roomId];
   console.log(`Starting game in room ${roomId}`);
@@ -272,18 +298,19 @@ function startGame(roomId) {
     }
   });
   
-  room.gameLoopInterval = setInterval(() => {
+  room.gameLoopInterval = setInterval(async () => {
       updateGame(room.game);
       if (room.game.player1Score >= 11 || room.game.player2Score >= 11) {
         if (room.game.player1Score > room.game.player2Score &&
           room.game.player1Score - room.game.player2Score >= 2) {
           clearInterval(room.gameLoopInterval);
           const winner = room.players.find(player => player.paddleNumber === 1);
+          const winnernick = await getNick(winner.id);
           room.players.forEach(p => {
             if (p.conn && p.conn.socket.readyState === 1) {
               p.conn.socket.send(JSON.stringify({
                 type: 'game_over',
-                winner: { id: winner.id }, //nickname has to be included later
+                winner: { id: winner.id , name: winnernick}, //nickname has to be included later
               }));
             }
           });
@@ -295,11 +322,12 @@ function startGame(roomId) {
           room.game.player2Score - room.game.player1Score >= 2) {
           clearInterval(room.gameLoopInterval);
           const winner = room.players.find(player => player.paddleNumber === 2);
+          const winnernick = await getNick(winner.id);
           room.players.forEach(p => {
             if (p.conn && p.conn.socket.readyState === 1) {
               p.conn.socket.send(JSON.stringify({
                 type: 'game_over',
-                winner: { id: winner.id }, //nickname has to be included later
+                winner: { id: winner.id, name: winnernick}, //nickname has to be included later
               }));
             }
           });

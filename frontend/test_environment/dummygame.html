@@ -88,9 +88,9 @@
           currentId().then(currentUserId => {
             const isWinner = msg.winner.id === currentUserId;
             if (isWinner) {
-              document.getElementById('status').textContent = `Game Over! You WIN! Winner: ${msg.winner.id}`;
+              document.getElementById('status').textContent = `Game Over! You WIN! Winner: ${msg.winner.name} , uid: ${msg.winner.id}`;
             } else {
-              document.getElementById('status').textContent = `Game Over! You LOSE! Winner: ${msg.winner.id}`;
+              document.getElementById('status').textContent = `Game Over! You LOSE! Winner: ${msg.winner.name} , uid: ${msg.winner.id}`;
             }
           });
         } else if (msg.type === 'room_closed') {
