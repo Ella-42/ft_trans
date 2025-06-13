@@ -92,6 +92,10 @@ fastify.get('/ws', { websocket: true }, async (conn, req) => {
 
   conn.socket.on('close', () => {
     const room = findRoomByPlayerId(conn.userId);
+    const player = room.players.find(p => p.id === conn.userId);
+    if (player?.conn?.socket != conn.socket) {
+      return ;
+    }
     if (room) {
       const otherPlayer = room.players.find(p => p.id !== conn.userId);
       if (room.gameStarted === false) {
@@ -106,11 +110,8 @@ fastify.get('/ws', { websocket: true }, async (conn, req) => {
         delete rooms[Object.keys(rooms).find(id => rooms[id] === room)];
       }
       else {
-        const player = room.players.find(p => p.id === conn.userId);
-        if (player?.conn?.socket === conn.socket) {
           player.conn = null;
           console.log(`Player ${conn.userId} disconnected`);
-        }
       }
     }
   });
