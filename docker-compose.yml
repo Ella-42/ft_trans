@@ -60,6 +60,28 @@ services:
       - ./backend/authenticator/google_authenticator.js:/srv/google_authenticator.js:ro
       - ./backend/authenticator/package.json:/srv/package.json:ro
 
+  ## Backend email server
+  #mailserver:
+    #container_name: mailserver
+    #build: ./backend/mailserver
+    #restart: on-failure:3
+    ##env_file: .google_credentials.env
+    #environment:
+      #- domain=ella-peeters.me
+    #depends_on:
+      #- database
+    ##networks:
+      ##- database #Connects to database
+      ##- backend #Connects to Nginx
+    #ports:
+      #- "465:465" #SMTP
+    #volumes:
+      #- /home/lpeeters/.ssh/ella-peeters.me_dkim_public.key:/etc/ssh/ella-peeters.me_dkim_public.key:ro #Mount public DKIM key
+      #- /home/lpeeters/.ssh/ella-peeters.me_dkim_private.key:/etc/ssh/ella-peeters.me_dkim_private.key:ro #Mount private DKIM key
+      ##- ./backend/mailserver/server.js:/srv/server.js:ro
+      #- ./backend/mailserver/client.js:/srv/client.js:ro
+      #- ./backend/mailserver/package.json:/srv/package.json:ro
+
 volumes:
   db-volume:
     name: sqlite
