@@ -1,18 +1,40 @@
-//import axios from 'axios'
 import { renderNavBar } from '../components/NavBar.js';
 import { renderFooter } from '../components/Footer.js';
-// export const sendDataToBackend = async (email: string, password: string) => {
-// 	const { data } = await axios.post('http://localhost:1919/login', {
-// 			email, password, 
-// 		}, {
-// 			headers: {
-// 				'Content-Type': 'application/json'
-// 			}
-// 		}
-// 	)
-// 	console.log("The data is: ", data);
-// 	return data;
-// }
+import { navigateTo } from '../../router.js';
+import { emailValidation, loginPasswordValidation, invalidLogin } from '../tools/dataValidation.js';
+export const attachLoginFormListener = () => {
+    const loginForm = document.querySelector('#loginForm');
+    console.log("The attachLoginFormListener runs");
+    loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        console.log("The login function runs");
+        const loginForm = document.querySelector('#loginForm');
+        const formData = new FormData(loginForm);
+        const email = formData.get('email');
+        const password = formData.get('password');
+        if (!emailValidation(email))
+            return;
+        if (!loginPasswordValidation(password))
+            return;
+        try {
+            const response = await axios.post('https://trans.ella-peeters.me/api/login', {
+                email: String(email),
+                password: String(password),
+            }, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            console.log("The reponse after logging in is: ", response);
+            sessionStorage.setItem('loginSuccess', 'true');
+            navigateTo('/safe/dashboard');
+        }
+        catch (error) {
+            console.error("The error is: ", error);
+            invalidLogin();
+        }
+    });
+};
 export const renderLogin = () => {
     return `
   	${renderNavBar()}
