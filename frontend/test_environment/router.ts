@@ -4,23 +4,29 @@ import { renderLogin } from "./src/pages/Login.js";
 import { renderRegister } from "./src/pages/Register.js";
 import { attachRegisterFormListener } from './src/pages/Register.js';
 import { attachLoginFormListener } from './src/pages/Login.js';
+import { renderDashboardComponent } from './src/components/DashboardComponent.js';
 import { renderDashboard } from './src/pages/Dashboard.js';
-import { attachDashboardListener } from './src/pages/Dashboard.js'
-import { getCookie } from './src/tools/helper.js'
+import { renderProfile } from './src/components/ProfileComponent.js';
+import { attachDashboardListener } from './src/pages/Dashboard.js';
+import { getCookie } from './src/tools/helper.js';
 
 declare const axios: any;
 
 const routes: { [key: string]: () => string } = {
-    "/safe": renderHomePage,
-    "/safe/login": renderLogin,
-    "/safe/cookie-policy": renderCookiePolicy,
-    "/safe/register": renderRegister,
+	"/safe": renderHomePage,
+	"/safe/login": renderLogin,
+	"/safe/cookie-policy": renderCookiePolicy,
+	"/safe/register": renderRegister,
+};
 
+const dashboardRoutes: { [key: string]: (user: any) => string } = {
+	"/safe/dashboard": (user) => renderDashboardComponent(user),
+	"/safe/dashboard/profile": () => renderProfile(),
 };
 
 export const navigateTo = (url: string) => {
-    history.pushState({}, "", url);
-    router(); // Re-render the page
+	history.pushState({}, "", url);
+	router(); // Re-render the page
 };
 
 export const router = async () => {
@@ -34,24 +40,45 @@ export const router = async () => {
         return;
     }
 
-    if (path === "/safe/dashboard") {
+    if (path.startsWith("/safe/dashboard")) {
 	try {
 		const res = await axios.get('https://trans.ella-peeters.me/api/users/verifytoken', {
 			withCredentials: true
 		});
-		console.log("The response in dashboard  is: ", res);
-		if (res.data.message === 'OK') {
-			const user = res.data;
-			console.log("The user is: ", user);
-			const page = renderDashboard(user);
-			app.innerHTML = page;
-            		attachLoggedInMenuListener();
-			attachDashboardListener();
-			attachLogoutListener();
+
+		if (res.data.message === "OK") {
+        		const user = res.data;
+
+        		// If dashboard already rendered, just update content
+        		if (!document.getElementById("dashboard-content")) {
+          		app.innerHTML = renderDashboard(user); // First full layout render
+          		attachLoggedInMenuListener();
+          		attachDashboardListener();
+          		attachLogoutListener();
+       			}
+
+        		// Inject only the inner page
+        		const innerContent = dashboardRoutes[path];
+        		if (innerContent) {
+          			document.getElementById("dashboard-content").innerHTML = innerContent(user);
+        		} else {
+          			document.getElementById("dashboard-content").innerHTML = `<p>404 - Page not found in dashboard</p>`;
+        		}
         		return;
-		}
-	}
-	catch (error) {
+      		}
+
+	//	console.log("The response in dashboard  is: ", res);
+	//	if (res.data.message === 'OK') {
+	//		const user = res.data;
+	//		console.log("The user is: ", user);
+	//		const page = renderDashboard(user);
+	//		app.innerHTML = page;
+	//           		attachLoggedInMenuListener();
+	//		attachDashboardListener();
+	//		attachLogoutListener();
+	//       		return;
+	//	}
+	} catch (error) {
 		console.error('Token verification failed: ', error);
 		navigateTo('/safe/login');
 		return ;

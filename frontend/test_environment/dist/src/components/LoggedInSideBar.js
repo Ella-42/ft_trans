@@ -10,10 +10,10 @@ export function renderLoggedInSideBar() {
 					</div>
 				</div>
 				<div class="hidden flex md:flex flex-col pb-5 px-7">
-					<a data-link href="/dashboard" class="text-xl md:text-base py-2 text-white hover:pl-3 hover:text-gray-400">Dashboard</a>
+					<a data-link href="/safe/dashboard" class="text-xl md:text-base py-2 text-white hover:pl-3 hover:text-gray-400">Dashboard</a>
 					<a data-link href="/matchmaking" class="text-xl md:text-base py-2 text-white hover:pl-3 hover:text-gray-400">Matchmaking</a>
 					<a data-link href="/tournament" class="text-xl md:text-base py-2 text-white hover:pl-3 hover:text-gray-400">Tournament</a>
-					<a data-link href="/profile" class="text-xl md:text-base py-2 text-white hover:pl-3 hover:text-gray-400">Profile</a>
+					<a data-link href="/safe/dashboard/profile" class="text-xl md:text-base py-2 text-white hover:pl-3 hover:text-gray-400">Profile</a>
 					<a data-link href="/stats" class="text-xl md:text-base py-2 text-white hover:pl-3 hover:text-gray-400">Stats</a>
 				</div>
 		</nav>

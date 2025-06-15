@@ -12,8 +12,6 @@ export const attachLoginFormListener = () => {
         const formData = new FormData(loginForm);
         const email = formData.get('email');
         const password = formData.get('password');
-        console.log("The email is: ", email);
-        console.log("The password is: ", password);
         if (!emailValidation(email))
             return;
         if (!loginPasswordValidation(password))
