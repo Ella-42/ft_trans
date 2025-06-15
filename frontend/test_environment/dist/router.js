@@ -1,5 +1,7 @@
 import { renderHomePage } from "./src/pages/HomePage.js";
 import { renderCookiePolicy } from "./src/pages/CookiePolicy.js";
+import { renderPrivacyPolicy } from "./src/pages/PrivacyPolicy.js";
+import { renderTermsAndConditions } from "./src/pages/TermsAndConditions.js";
 import { renderLogin } from "./src/pages/Login.js";
 import { renderRegister } from "./src/pages/Register.js";
 import { attachRegisterFormListener } from './src/pages/Register.js';
@@ -7,16 +9,24 @@ import { attachLoginFormListener } from './src/pages/Login.js';
 import { renderDashboardComponent } from './src/components/DashboardComponent.js';
 import { renderDashboard } from './src/pages/Dashboard.js';
 import { renderProfile } from './src/components/ProfileComponent.js';
+import { renderMatchmaking } from './src/components/MatchmakingComponent.js';
+import { renderTournament } from './src/components/TournamentComponent.js';
+import { renderStats } from './src/components/StatsComponent.js';
 import { attachDashboardListener } from './src/pages/Dashboard.js';
 const routes = {
     "/safe": renderHomePage,
     "/safe/login": renderLogin,
     "/safe/cookie-policy": renderCookiePolicy,
+    "/safe/privacy-policy": renderPrivacyPolicy,
+    "/safe/terms-and-conditions": renderTermsAndConditions,
     "/safe/register": renderRegister,
 };
 const dashboardRoutes = {
     "/safe/dashboard": (user) => renderDashboardComponent(user),
+    "/safe/dashboard/matchmaking": () => renderMatchmaking(),
+    "/safe/dashboard/tournament": () => renderTournament(),
     "/safe/dashboard/profile": () => renderProfile(),
+    "/safe/dashboard/stats": () => renderStats(),
 };
 export const navigateTo = (url) => {
     history.pushState({}, "", url);
@@ -45,6 +55,7 @@ export const router = async () => {
                     attachDashboardListener();
                     attachLogoutListener();
                 }
+                attachSideBarActiveLinkListener();
                 // Inject only the inner page
                 const innerContent = dashboardRoutes[path];
                 if (innerContent) {
@@ -55,17 +66,6 @@ export const router = async () => {
                 }
                 return;
             }
-            //	console.log("The response in dashboard  is: ", res);
-            //	if (res.data.message === 'OK') {
-            //		const user = res.data;
-            //		console.log("The user is: ", user);
-            //		const page = renderDashboard(user);
-            //		app.innerHTML = page;
-            //           		attachLoggedInMenuListener();
-            //		attachDashboardListener();
-            //		attachLogoutListener();
-            //       		return;
-            //	}
         }
         catch (error) {
             console.error('Token verification failed: ', error);
@@ -118,6 +118,22 @@ const attachLogoutListener = async () => {
         }
         catch (error) {
             console.error("The error is: ", error);
+        }
+    });
+};
+const attachSideBarActiveLinkListener = () => {
+    console.log("The listener for the active links runs");
+    const links = document.querySelectorAll('.sidebar-link');
+    const currentPath = window.location.pathname;
+    console.log("The links: ", links);
+    console.log("The current path is: ", currentPath);
+    links.forEach(link => {
+        const href = link.getAttribute('href');
+        if (href === currentPath) {
+            link.classList.add('bg-primary', 'rounded');
+        }
+        else {
+            link.classList.remove('bg-primary', 'rounded');
         }
     });
 };
