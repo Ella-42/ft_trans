@@ -1,7 +1,8 @@
 import { config } from 'dotenv';
 import { readFileSync } from 'fs';
 import { resolveMx } from 'dns/promises';
-import { connect } from 'tls';
+import { connect as tcpConnect } from 'net';
+import { connect as tlsConnect } from 'tls';
 import crypto from 'crypto';
 
 config();
@@ -9,8 +10,10 @@ const domain = process.env.domain;
 
 const dkimPrivateKey = readFileSync(`/etc/ssh/${domain}_dkim_private.key`, 'utf-8');
 
-const to = 'test-ib7b1v055@srv1.mail-tester.com';
+const to = 'lpeeters@student.s19.be';
 const from = `no-reply@${domain}`;
+
+const smtpServer = 'smtp.mailgun.org';
 
 function getMxRecords(domain)
 {
@@ -76,73 +79,83 @@ function generateDkimHeader(headers, body)
 
 function sendMail()
 {
-	const receiverDomain = to.split('@')[1];
+	let socket = tcpConnect(2525, smtpServer);
 
-	getMxRecords(receiverDomain)
+	const sendCommand = (command) => socket.write(command + '\r\n');
+	const readResponse = () =>
+		new Promise(resolve => socket.once('data', data => resolve(data.toString())));
+	const handleResponse = (statusCode, errorMessage, command) => response =>
+	{
+		if (!response.startsWith(statusCode))
+			throw (new Error(errorMessage));
 
-	.then
+		sendCommand(command);
+
+		return (readResponse());
+	};
+
+	const date = new Date().toUTCString();
+	const headers =
+	[
+		['From', from],
+		['To', to],
+		['Subject', '2FA'],
+		['Date', date]
+	];
+	const body = 'Your one-time code is: 546453';
+	const dkimHeader = generateDkimHeader(headers, body);
+
+	const rawMail =
+		`From: ${from}\r\n` +
+		`To: ${to}\r\n` +
+		`Subject: 2FA\r\n` +
+		`Date: ${date}\r\n` +
+		dkimHeader +
+		`\r\n${body}\r\n.\r\n`;
+
+	return (new Promise
 	(
-		mxHosts =>
+		(resolve, reject) =>
 		{
-			if (!mxHosts.length)
-				throw (new Error(`No MX records found for ${receiverDomain}`));
-
-			const socket = connect(465, mxHosts[0], { rejectUnauthorized: false });
-
-			const sendCommand = (command) => socket.write(command + '\r\n');
-			const readResponse = () =>
-				new Promise(resolve => socket.once('data', data => resolve(data.toString())));
-			const handleResponse = (statusCode, errorMessage, command) => response =>
-			{
-				if (!response.startsWith(statusCode))
-					throw (new Error(errorMessage));
-
-				sendCommand(command);
-
-				return (readResponse());
-			};
-
-			const date = new Date().toUTCString();
-			const headers =
-			[
-				['From', from],
-				['To', to],
-				['Subject', '2FA'],
-				['Date', date]
-			];
-			const body = 'Your one-time code is: 546453';
-			const dkimHeader = generateDkimHeader(headers, body);
-
-			const rawMail =
-				`From: ${from}\r\n` +
-				`To: ${to}\r\n` +
-				`Subject: 2FA\r\n` +
-				`Date: ${date}\r\n` +
-				dkimHeader +
-				`\r\n${body}\r\n.\r\n`;
-
-			return (new Promise
-			(
-				(resolve, reject) =>
-				{
-					socket.once('error', reject);
-					socket.once('connect', resolve);
-				}
-			))
-
-			.then(() => readResponse())
-
-			.then(handleResponse('220', 'No 220', `EHLO ${domain}`))
-			.then(handleResponse('250', 'EHLO failed', `MAIL FROM:<${from}>`))
-			.then(handleResponse('250', 'MAIL FROM failed', `RCPT TO:<${to}>`))
-			.then(handleResponse('250', 'RCTP TO failed', `DATA`))
-			.then(handleResponse('354', 'DATA failed', rawMail))
-			.then(handleResponse('250', 'Send failed', 'QUIT'))
-
-			.then(() => { socket.end(); console.log('Sent'); });
+			socket.once('error', reject);
+			socket.once('connect', resolve);
 		}
-	)
+	))
 
+	.then(() => readResponse())
+
+	.then(handleResponse('220', 'No 220', `EHLO ${domain}`))
+	.then(handleResponse('250', 'EHLO failed', `STARTTLS`))
+
+	.then((response) =>
+	{
+		if (!response.startsWith('220'))
+			throw new Error('STARTTLS failed');
+
+		return (new Promise((resolve, reject) =>
+		{
+			socket.removeAllListeners('data');
+			socket = tlsConnect({ socket, servername: smtpServer }, () => resolve(socket));
+			socket.once('error', reject);
+		}))
+
+		.then(() =>
+		{
+			sendCommand(`EHLO ${domain}`);
+			return readResponse();
+		});
+	})
+
+	.then(handleResponse('250', 'EHLO failed', `AUTH LOGIN`))
+	.then(handleResponse('334', 'AUTH LOGIN failed', Buffer.from(process.env.SMTP_USER).toString('base64')))
+	.then(handleResponse('334', 'SMTP user rejected', Buffer.from(process.env.SMTP_PASSWORD).toString('base64')))
+	.then(handleResponse('235', 'SMTP password rejected', `MAIL FROM:<${from}>`))
+	.then(handleResponse('250', 'MAIL FROM failed', `RCPT TO:<${to}>`))
+	.then(handleResponse('250', 'RCTP TO failed', 'DATA'))
+	.then(handleResponse('354', 'DATA failed', rawMail))
+	.then(handleResponse('250', 'Send failed', 'QUIT'))
+
+	.then(() => { socket.end(); console.log('Sent'); })
 	.catch(console.error);
 }
 

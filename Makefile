@@ -6,7 +6,7 @@
 #    By: lpeeters <lpeeters@student.s19.be>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/04 21:07:01 by lpeeters          #+#    #+#              #
-#    Updated: 2025/06/05 15:44:51 by lpeeters         ###   ########.fr        #
+#    Updated: 2025/06/24 22:47:46 by lpeeters         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -31,6 +31,8 @@ logs:
 		docker logs database \
 	&&	echo "\n\nauthenticator:\n" \
 	&&	docker logs authenticator \
+	&&	echo "\n\nmailserver:\n" \
+	&&	docker logs mailserver \
 	&&	echo "\n\nNginx:\n" \
 	&&	docker logs nginx
 
@@ -41,6 +43,10 @@ nginx:
 # Shell into the authenticator Docker container
 authenticator:
 	@docker exec -it authenticator sh
+
+# Shell into the mailserver Docker container
+mailserver:
+	@docker exec -it mailserver sh
 
 # Shell into the server Docker container
 database:
@@ -58,4 +64,4 @@ clean:
 re: down clean up
 
 # Targets
-.PHONY: up down status nginx authenticator database logs clean re
+.PHONY: up down status nginx authenticator mailserver database logs clean re
