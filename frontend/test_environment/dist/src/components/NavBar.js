@@ -13,6 +13,7 @@ export function renderNavBar() {
 				<div class="hidden flex md:flex md:flex-row flex-col items-center justify-start pb-5 md:space-x-5 pb-3 md:pb-0 navigation-menu">
 					<a data-link href="/safe#home" class="text-base md:text-base py-1 px-3 block text-white hover:text-gray-400">Home</a>
 					<a data-link href="/safe#features" class="text-base md:text-base py-1 px-3 block text-white hover:text-gray-400">Features</a>
+					<a data-link href="/safe/dashboard" class="text-base md:text-base py-1 px-3 block text-white hover:text-gray-400">Dashboard</a>
 					<a data-link href="/safe/login" data-link>
 						<button type="button" class="text-base md:text-base text-white bg-primary my-3 py-2 px-4 rounded-md flex items-center whitespace-nowrap hover:text-primary hover:bg-white">
 								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-2">
