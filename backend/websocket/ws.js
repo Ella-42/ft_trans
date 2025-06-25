@@ -24,6 +24,8 @@ await fastify.register(cookie, {
 
 const rooms = {}; // format: { roomId: { players: [{ id, conn }], ready: Set, gameStarted: bool, game[{....}], gameLoopInterval } }
 
+const localRooms = {}; // format: { roomId: conn, connected: bool, gameStarted: bool, game[{....}], gameLoopInterval, lastActive: time } }
+
 function findRoomByPlayerId(playerId) {
   for (const [roomId, room] of Object.entries(rooms)) {
     if (room.players.some(player => player.id === playerId)) {
@@ -34,39 +36,61 @@ function findRoomByPlayerId(playerId) {
 }
 
 fastify.get('/ws', { websocket: true }, async (conn, req) => {
-  try {
-    const cookies = cookie.parse(req.headers.cookie || '');
-    const tokenCookie = cookies.token;
-
-    const token = fastify.unsignCookie(tokenCookie);
-    if (!token.valid || !token.value) {
-      conn.socket.close();
-      return;
-    }
-    let decoded;
-    try {
-      decoded = jwt.verify(token.value, publicKey, { algorithms: ['RS256'] });
-    } catch (err) {
-      conn.socket.close();
-      return;
-    }
-    conn.userId = decoded.id;
-  } catch (err) {
-    conn.socket.close();
-    return;
-  }
-
   conn.socket.on('message', async (message) => {
     try {
       const msg = JSON.parse(message.toString());
       if (typeof msg !== 'object' || typeof msg.type !== 'string') return;
 
-      if (!conn.userId) {
-        conn.socket.close();
-        return;
-      }
-
       const { type, roomId } = msg;
+
+      if (type === 'local') {
+        await handleLocal(conn);
+      } else if (type === 'localReady') {
+        await localStart(roomId, conn);
+      } else if (type === 'localReconnect') {
+        await localReconnect(roomId, conn);
+      } else if (type === 'localMove') {
+        const lroomid = Object.keys(localRooms).find(rid =>
+                localRooms[rid].conn.socket === conn.socket);
+        if (!lroomid) {
+          conn.socket.close();
+          return ;
+        }
+        const room = localRooms[lroomid];
+        const paddle = msg.paddleNumber === 1 ? room.game.paddle1 : room.game.paddle2;
+
+        if (msg.direction === "up" && paddle.y > 0) {
+          paddle.y -= PADDLE_SPEED;
+        } else if (msg.direction === "down" && paddle.y < GAME_HEIGHT - paddle.height) {
+          paddle.y += PADDLE_SPEED;
+        }
+      } else {
+        try {
+          const cookies = cookie.parse(req.headers.cookie || '');
+          const tokenCookie = cookies.token;
+      
+          const token = fastify.unsignCookie(tokenCookie);
+          if (!token.valid || !token.value) {
+            conn.socket.close();
+            return;
+          }
+          let decoded;
+          try {
+            decoded = jwt.verify(token.value, publicKey, { algorithms: ['RS256'] });
+          } catch (err) {
+            conn.socket.close();
+            return;
+          }
+          conn.userId = decoded.id;
+          if (!conn.userId) {
+            conn.socket.close();
+            return;
+          }
+        } catch (err) {
+          conn.socket.close();
+          return;
+        }
+      }
 
       if (type === 'auto_join') {
         await handleAutoJoin(conn, conn.userId);
@@ -91,7 +115,20 @@ fastify.get('/ws', { websocket: true }, async (conn, req) => {
   });
 
   conn.socket.on('close', () => {
+    const lroomid = Object.keys(localRooms).find(rid =>
+      localRooms[rid].conn.socket === conn.socket);
+    if (lroomid) {
+      if (localRooms[lroomid].gameStarted === false) {
+        delete localRooms[lroomid];
+        return ;
+      }
+      localRooms[lroomid].conn = null;
+      localRooms[lroomid].connected = false;
+      localRooms[lroomid].lastActive = Date.now();
+      return ;
+    }
     const room = findRoomByPlayerId(conn.userId);
+    if (!room) return;
     const player = room.players.find(p => p.id === conn.userId);
     if (player?.conn?.socket != conn.socket) {
       return ;
@@ -187,6 +224,80 @@ function updateGame(game) {
         game.ballSpeed += 0.5;
     }
 }
+
+
+//Local Game handling
+
+
+async function handleLocal(conn) {
+  let roomId, room;
+  roomId = uuidv4();
+  localRooms[roomId] = { conn: conn, connected: true, gameStarted: false, game: createGame(), lastActive: Date.now() };
+  room = localRooms[roomId];
+  conn.socket.send(JSON.stringify({ type: 'waiting_ready', roomId }));
+}
+
+async function localReconnect(roomId, conn) {
+  const room = localRooms[roomId];
+  if (!room) {
+    conn.socket.send(JSON.stringify({ type: 'error', message: 'Room not found' }));
+    return;
+  }
+  if (room.conn) {
+    conn.socket.send(JSON.stringify({ type: 'error', message: 'Room has active socket connection' }));
+    return ;
+  }
+  room.conn = conn;
+  room.connected = true;
+  conn.socket.send(JSON.stringify({ type: 'reconnected', roomId }));
+}
+
+async function localStart(roomId, conn) {
+  const room = localRooms[roomId];
+  if (!room || room.gameStarted) return;
+  if (room.conn.socket != conn.socket) {
+    conn.socket.send(JSON.stringify({ type: 'error', message: 'Room mismatch' }));
+    return ;
+  }
+  room.connected = true;
+  room.gameStarted = true;
+  
+  console.log(`Starting game in room ${roomId}`);
+  conn.socket.send(JSON.stringify({ type: 'game_start' })); 
+  room.gameLoopInterval = setInterval(async () => {
+    updateGame(room.game);
+    if (room.game.player1Score >= 11 || room.game.player2Score >= 11) {
+      if (room.game.player1Score > room.game.player2Score &&
+        room.game.player1Score - room.game.player2Score >= 2) {
+        clearInterval(room.gameLoopInterval);
+        if (room.conn && room.conn.socket.readyState === 1) {
+          room.conn.socket.send(JSON.stringify({
+            type: 'game_over',
+            winner: { id: 1 },
+          }));
+        }
+        room.conn.socket.close();
+        delete localRooms[roomId];
+      }
+      else if (room.game.player2Score > room.game.player1Score &&
+        room.game.player2Score - room.game.player1Score >= 2) {
+        clearInterval(room.gameLoopInterval);
+        if (room.conn && room.conn.socket.readyState === 1) {
+          room.conn.socket.send(JSON.stringify({
+            type: 'game_over',
+            winner: { id: 2 },
+          }));
+        }
+        room.conn.socket.close();
+        delete localRooms[roomId];
+      }
+    }
+    if (room.conn && room.conn.socket.readyState === 1) {
+      room.conn.socket.send(JSON.stringify({ type: "game_tick", state: room.game }));
+    }
+  }, FRAME_RATE);
+}
+
 
 //Room handling below
 
@@ -311,7 +422,7 @@ function startGame(roomId) {
             if (p.conn && p.conn.socket.readyState === 1) {
               p.conn.socket.send(JSON.stringify({
                 type: 'game_over',
-                winner: { id: winner.id , name: winnernick}, //nickname has to be included later
+                winner: { id: winner.id , name: winnernick },
               }));
             }
           });
@@ -328,7 +439,7 @@ function startGame(roomId) {
             if (p.conn && p.conn.socket.readyState === 1) {
               p.conn.socket.send(JSON.stringify({
                 type: 'game_over',
-                winner: { id: winner.id, name: winnernick}, //nickname has to be included later
+                winner: { id: winner.id, name: winnernick },
               }));
             }
           });
@@ -349,6 +460,9 @@ function startGame(roomId) {
 fastify.addHook('onClose', async (instance, done) => {
   for (const roomId in rooms) {
     clearInterval(rooms[roomId].gameLoopInterval);
+  }
+  for (const roomId in localRooms) {
+    clearInterval(localRooms[roomId].gameLoopInterval);
   }
   done();
 });
@@ -377,5 +491,17 @@ fastify.listen({ port: 3330, host: '0.0.0.0' }, () => {
         delete rooms[roomId];
       }
     }
+
+    for (const [roomId, room] of Object.entries(localRooms)) {
+      if (room.connected === false && Date.now() - room.lastActive > 2 * 60 * 1000) {
+        console.log(`Cleaning up room ${roomId}`);
+
+        if (room.gameLoopInterval) {
+          clearInterval(room.gameLoopInterval);
+        }
+        delete localRooms[roomId];
+      }
+    }
+
   }, 5 * 60 * 1000); //remove abandoned rooms every 5 minutes
 });
