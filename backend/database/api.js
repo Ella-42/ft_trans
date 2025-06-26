@@ -1,10 +1,8 @@
 import sqlite3 from 'sqlite3';
 import Fastify from 'fastify';
 import jwt from 'jsonwebtoken';
-import fastifyWebsocket from '@fastify/websocket';
 import fastifyCors from '@fastify/cors';
 import fastifyCookie from '@fastify/cookie';
-//import { addGameWin, addGameLoss } from './game_tools.js';
 
 const { Database } = sqlite3;
 const domain = process.env.domain;
@@ -47,9 +45,6 @@ await registerCors(internalFastify);
 
 await registerCookie(fastify);
 await registerCookie(internalFastify);
-
-// Register WebSocket plugin
-fastify.register(fastifyWebsocket);
 
 // Initialize SQLite database
 const db = new Database('/var/www/db/pong.sqlite', sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
@@ -516,7 +511,7 @@ fastify.get('/api/whoami', { preHandler: checkLoginInStatus }, async (request, r
         if (!user) {
             return reply.send({ nickname: "guest", id: -1 });
         }
-        return reply.send({ nickname: user.nickname, id: user.id });
+        return reply.send({ nickname: user.nickname, id: id });
     } catch (err) {
         reply.status(500).send({ error: 'Failed to fetch username' });
     }
@@ -536,7 +531,7 @@ fastify.get('/api/users/:id/history', { preHandler: verifyToken }, async (reques
     try {
         const { id } = request.params;
 
-        const matches = await dbGet(
+        const matches = await dbAll(
           'SELECT * FROM matches WHERE winner = ? OR loser = ? ORDER BY time DESC LIMIT 25', [id, id]
 //Not sure if 25 is a good number
         );
@@ -566,6 +561,28 @@ fastify.get('/api/users/:id/history', { preHandler: verifyToken }, async (reques
     } catch (err) {
         reply.status(500).send({ error: 'Failed to fetch match history' });
     }
+});
+
+const VALID_GAMES = ["pong"];
+
+internalFastify.post('/api/updateResult', async (request, reply) => {
+  try {
+    const { winId, lossId, game } = request.body;
+    if (!Number.isInteger(winId) || !Number.isInteger(lossId)) {
+      throw new Error("Invalid user ID");
+    }
+    if (!VALID_GAMES.includes(game)) {
+      throw new Error("Invalid game");
+    }
+    const win = await dbRun(`UPDATE users SET ${game}_wins = ${game}_wins + 1 WHERE id = ?`, [winId]);
+    const loss =  await dbRun(`UPDATE users SET ${game}_losses = ${game}_losses + 1 WHERE id = ?`, [lossId]);
+    const history = await dbRun('INSERT INTO matches (game, winner, loser) VALUES (?, ?, ?)', [game, winId, lossId]);
+    if (!win.changes  || !loss.changes || !history.changes) return reply.status(204).send({ message: 'Some changes are not made' });
+    reply.status(200).send({ message: 'User updated successfully' });
+  } catch (err) {
+    console.error(err);
+    reply.status(500).send({ error: 'Failed to update user' });
+  }
 });
 
 fastify.get('/api', async () => `Testing ${domain}`);

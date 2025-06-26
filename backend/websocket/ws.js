@@ -409,7 +409,7 @@ function startGame(roomId) {
       p.conn.socket.send(JSON.stringify({ type: 'game_start' }));
     }
   });
-  
+
   room.gameLoopInterval = setInterval(async () => {
       updateGame(room.game);
       if (room.game.player1Score >= 11 || room.game.player2Score >= 11) {
@@ -417,6 +417,7 @@ function startGame(roomId) {
           room.game.player1Score - room.game.player2Score >= 2) {
           clearInterval(room.gameLoopInterval);
           const winner = room.players.find(player => player.paddleNumber === 1);
+          const loser = room.players.find(player => player.paddleNumber === 2);
           const winnernick = await getNick(winner.id);
           room.players.forEach(p => {
             if (p.conn && p.conn.socket.readyState === 1) {
@@ -426,7 +427,17 @@ function startGame(roomId) {
               }));
             }
           });
-          //save result yet to be implemented
+          const res = await fetch(`http://database:4334/api/updateResult`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ winId: winner.id, lossId: loser.id, game: 'pong' })
+          });
+          if (!res.ok) {
+            const error = await res.json();
+            console.log(`Error updating result: ${error.error || "Unknown error"}`);
+          }
           room.players.forEach(p => p.conn.socket.close());
           delete rooms[roomId];
         }
@@ -434,6 +445,7 @@ function startGame(roomId) {
           room.game.player2Score - room.game.player1Score >= 2) {
           clearInterval(room.gameLoopInterval);
           const winner = room.players.find(player => player.paddleNumber === 2);
+          const loser = room.players.find(player => player.paddleNumber === 1);
           const winnernick = await getNick(winner.id);
           room.players.forEach(p => {
             if (p.conn && p.conn.socket.readyState === 1) {
@@ -443,7 +455,17 @@ function startGame(roomId) {
               }));
             }
           });
-          //save result yet to be implemented
+          const res = await fetch(`http://database:4334/api/updateResult`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ winId: winner.id, lossId: loser.id, game: 'pong' })
+          });
+          if (!res.ok) {
+            const error = await res.json();
+            console.log(`Error updating result: ${error.error || "Unknown error"}`);
+          }
           room.players.forEach(p => p.conn.socket.close());
           delete rooms[roomId];
         }

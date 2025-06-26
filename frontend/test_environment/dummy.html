@@ -296,6 +296,57 @@
             loadUsers();
             currentUser();
         });
+
+        async function fetchMatchHistory() {
+            const userId = document.getElementById('historyuserId').value;
+            const output = document.getElementById('historyoutput');
+
+            if (!userId) {
+                output.textContent = 'Please enter a user ID.';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/users/${userId}/history`, {
+                method: 'GET',
+                credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    output.textContent = `Error: ${response.status} - ${error.error}`;
+                    return;
+                }
+
+                const history = await response.json();
+
+                if (history.length === 0) {
+                    output.textContent = 'No match history found.';
+                } else {
+                    const table = document.createElement('table');
+                    const header = `
+                        <tr>
+                            <th>Date</th>
+                            <th>Game</th>
+                            <th>Winner</th>
+                            <th>Loser</th>
+                        </tr>`;
+                    const rows = history.map(match => `
+                        <tr>
+                            <td>${new Date(match.time).toLocaleString()}</td>
+                            <td>${match.game}</td>
+                            <td>${match.winner.nickname} (ID: ${match.winner.id})</td>
+                            <td>${match.loser.nickname} (ID: ${match.loser.id})</td>
+                        </tr>`).join('');
+                    table.innerHTML = header + rows;
+                    output.innerHTML = '';
+                    output.appendChild(table);
+                }
+
+            } catch (err) {
+                output.textContent = 'Error fetching match history: ' + err.message;
+            }
+        }
     </script>
 </head>
 <body>
@@ -330,6 +381,11 @@
     <input type="email" id="newemail" placeholder="Email">
     <input type="password" id="newpassword" placeholder="Password">
     <button type="button" onclick="updateUser()">Update</button>
+
+    <h2>Game History:</h2>
+    <input type="number" id="historyuserId" placeholder="Enter User ID" />
+    <button onclick="fetchMatchHistory()">Fetch History</button>
+    <pre id="historyoutput"></pre>
 
     <h1>Friends Management</h1>
     <ul id="friends"></ul>
