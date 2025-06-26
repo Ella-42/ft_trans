@@ -1,6 +1,5 @@
 import { config } from 'dotenv';
 import { readFileSync } from 'fs';
-import { resolveMx } from 'dns/promises';
 import { connect as tcpConnect } from 'net';
 import { connect as tlsConnect } from 'tls';
 import crypto from 'crypto';
@@ -9,25 +8,8 @@ config();
 const domain = process.env.domain;
 
 const dkimPrivateKey = readFileSync(`/etc/ssh/${domain}_dkim_private.key`, 'utf-8');
-
-const to = 'lpeeters@student.s19.be';
+const smtpServer = 'smtp.eu.mailgun.org'; //for SMTP port as DigitalOcean blocks them all
 const from = `no-reply@${domain}`;
-
-const smtpServer = 'smtp.mailgun.org';
-
-function getMxRecords(domain)
-{
-	return (resolveMx(domain)
-
-	.then
-	(
-		mxs =>
-		{
-			mxs.sort((a, b) => a.priority - b.priority);
-			return (mxs.map(mx => mx.exchange));
-		}
-	));
-}
 
 function canonicalizeHeaders(headers, dkimHeaders)
 {
@@ -77,7 +59,7 @@ function generateDkimHeader(headers, body)
 	return (`DKIM-Signature: ${dkimHeaderParams}${signature}\r\n`);
 }
 
-function sendMail()
+function sendMail(to, code)
 {
 	let socket = tcpConnect(2525, smtpServer);
 
@@ -87,7 +69,7 @@ function sendMail()
 	const handleResponse = (statusCode, errorMessage, command) => response =>
 	{
 		if (!response.startsWith(statusCode))
-			throw (new Error(errorMessage));
+			throw (new Error(`${errorMessage}; full response: ${response}`));
 
 		sendCommand(command);
 
@@ -102,7 +84,7 @@ function sendMail()
 		['Subject', '2FA'],
 		['Date', date]
 	];
-	const body = 'Your one-time code is: 546453';
+	const body = `Your one-time code is: ${code}`;
 	const dkimHeader = generateDkimHeader(headers, body);
 
 	const rawMail =
@@ -155,8 +137,8 @@ function sendMail()
 	.then(handleResponse('354', 'DATA failed', rawMail))
 	.then(handleResponse('250', 'Send failed', 'QUIT'))
 
-	.then(() => { socket.end(); console.log('Sent'); })
+	.then(() => { socket.end() })
 	.catch(console.error);
 }
 
-sendMail();
+//sendMail('lpeeters@student.s19.be', '576733');
