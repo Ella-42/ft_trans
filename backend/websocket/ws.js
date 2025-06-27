@@ -332,6 +332,9 @@ async function aiStart(roomId, conn, paddle) {
   room.gameLoopInterval = setInterval(async () => {
     updateGame(room.game);
     updateAi(room.game, paddle);
+    if (room.conn && room.conn.socket.readyState === 1) {
+      room.conn.socket.send(JSON.stringify({ type: "game_tick", state: room.game }));
+    }
     if (room.game.player1Score >= 11 || room.game.player2Score >= 11) {
       if (room.game.player1Score > room.game.player2Score &&
         room.game.player1Score - room.game.player2Score >= 2) {
@@ -359,9 +362,6 @@ async function aiStart(roomId, conn, paddle) {
         }
         delete aiRooms[roomId];
       }
-    }
-    if (room.conn && room.conn.socket.readyState === 1) {
-      room.conn.socket.send(JSON.stringify({ type: "game_tick", state: room.game }));
     }
   }, FRAME_RATE);
 }
@@ -407,6 +407,9 @@ async function localStart(roomId, conn) {
   conn.socket.send(JSON.stringify({ type: 'game_start' })); 
   room.gameLoopInterval = setInterval(async () => {
     updateGame(room.game);
+    if (room.conn && room.conn.socket.readyState === 1) {
+      room.conn.socket.send(JSON.stringify({ type: "game_tick", state: room.game }));
+    }
     if (room.game.player1Score >= 11 || room.game.player2Score >= 11) {
       if (room.game.player1Score > room.game.player2Score &&
         room.game.player1Score - room.game.player2Score >= 2) {
@@ -432,9 +435,6 @@ async function localStart(roomId, conn) {
         }
         delete localRooms[roomId];
       }
-    }
-    if (room.conn && room.conn.socket.readyState === 1) {
-      room.conn.socket.send(JSON.stringify({ type: "game_tick", state: room.game }));
     }
   }, FRAME_RATE);
 }
@@ -553,6 +553,11 @@ function startGame(roomId) {
 
   room.gameLoopInterval = setInterval(async () => {
       updateGame(room.game);
+      room.players.forEach(p => {
+        if (p.conn && p.conn.socket.readyState === 1) {
+          p.conn.socket.send(JSON.stringify({ type: "game_tick", state: room.game }));
+        }
+      });
       if (room.game.player1Score >= 11 || room.game.player2Score >= 11) {
         if (room.game.player1Score > room.game.player2Score &&
           room.game.player1Score - room.game.player2Score >= 2) {
@@ -611,11 +616,6 @@ function startGame(roomId) {
           delete rooms[roomId];
         }
       }
-      room.players.forEach(p => {
-        if (p.conn && p.conn.socket.readyState === 1) {
-          p.conn.socket.send(JSON.stringify({ type: "game_tick", state: room.game }));
-        }
-      });
   }, FRAME_RATE);
 
 };
