@@ -33,6 +33,8 @@
     let started = false;
     let gameOver = false;
     let gameType = null;
+    const keyPressed = {};
+    let keyInt = null;
 
     function draw(game) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -52,6 +54,46 @@
       ctx.font = '20px sans-serif';
       ctx.fillText(`${left}: ${game.player1Score}`, 50, 30);
       ctx.fillText(`${right}: ${game.player2Score}`, canvas.width - 100, 30);
+    }
+
+    // Send paddle movement with arrow keys
+    window.addEventListener('keydown', (e) => {
+      keyPressed[e.key] = true;
+      if (['ArrowUp', 'ArrowDown'].includes(e.key) && started) {
+        e.preventDefault(); // Prevent scrolling
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      keyPressed[e.key] = false;
+      if (['ArrowUp', 'ArrowDown'].includes(e.key) && started) {
+        e.preventDefault(); // Prevent scrolling
+      }
+    });
+
+    function handleInput() {
+      if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+      if (gameType === 'local') {
+        if (keyPressed['w']) {
+          socket.send(JSON.stringify({ type: 'localMove', direction: 'up', paddleNumber: 1 }));
+        }
+        if (keyPressed['s']) {
+          socket.send(JSON.stringify({ type: 'localMove', direction: 'down', paddleNumber: 1 }));
+        }
+        if (keyPressed['ArrowUp']) {
+          socket.send(JSON.stringify({ type: 'localMove', direction: 'up', paddleNumber: 2 }));
+        }
+        if (keyPressed['ArrowDown']) {
+          socket.send(JSON.stringify({ type: 'localMove', direction: 'down', paddleNumber: 2 }));
+        }
+      } else if (gameType === 'ai') {
+        if (keyPressed['ArrowUp']) {
+          socket.send(JSON.stringify({ type: 'aiMove', direction: 'up' }));
+        }
+        if (keyPressed['ArrowDown']) {
+          socket.send(JSON.stringify({ type: 'aiMove', direction: 'down' }));
+        }
+      }
     }
 
 // local game
@@ -99,11 +141,14 @@
           });
         } else if (msg.type === 'game_start') {
           started = true;
+          keyInt = setInterval(handleInput, 1000 / 30);
           document.getElementById('status').textContent = `Game started!`;
         } else if (msg.type === 'game_tick') {
           draw(msg.state);
         } else if (msg.type === 'game_over') {
           gameOver = true;
+          started = false;
+          clearInterval(keyInt);
           if (msg.winner.id === 1) {
             document.getElementById('status').textContent = `Game Over! Winner: ${left}`;
           } else {
@@ -168,11 +213,14 @@
           };
         } else if (msg.type === 'game_start') {
           started = true;
+          keyInt = setInterval(handleInput, 1000 / 30);
           document.getElementById('status').textContent = `Game started!`;
         } else if (msg.type === 'game_tick') {
           draw(msg.state);
         } else if (msg.type === 'game_over') {
           gameOver = true;
+          started = false;
+          clearInterval(keyInt);
           if (msg.result.win === 1) {
             document.getElementById('status').textContent = `Game Over! You Win!`;
           } else {
@@ -198,24 +246,6 @@
         console.error('WebSocket error:', err);
       };
     }
-
-    // Send paddle movement with arrow keys
-    window.addEventListener('keydown', (e) => {
-      if (!socket || socket.readyState !== WebSocket.OPEN) return;
-      if (e.key === 'ArrowUp' && gameType === 'local') {
-        socket.send(JSON.stringify({ type: 'localMove', direction: 'up', paddleNumber: 2 }));
-      } else if (e.key === 'ArrowDown' && gameType === 'local') {
-        socket.send(JSON.stringify({ type: 'localMove', direction: 'down', paddleNumber: 2 }));
-      } else if  (e.key === 'w' && gameType === 'local') {
-        socket.send(JSON.stringify({ type: 'localMove', direction: 'up', paddleNumber: 1 }));
-      } else if (e.key === 's' && gameType === 'local') {
-        socket.send(JSON.stringify({ type: 'localMove', direction: 'down', paddleNumber: 1 }));
-      } else if (e.key === 'ArrowUp' && gameType === 'ai') {
-        socket.send(JSON.stringify({ type: 'aiMove', direction: 'up' }));
-      } else if (e.key === 'ArrowDown' && gameType === 'ai') {
-        socket.send(JSON.stringify({ type: 'aiMove', direction: 'down' }));
-      }
-    });
 
     window.addEventListener('load', async () => {
             document.getElementById('status').innerHTML = `

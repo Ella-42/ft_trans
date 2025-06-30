@@ -199,12 +199,16 @@ const FRAME_RATE = 1000 / 60;
 const GAME_WIDTH = 500;
 const GAME_HEIGHT = 500;
 const BALL_RADIUS = 12.5;
-const PADDLE_SPEED = 50;
+const PADDLE_SPEED = 20;
 
 function createGame() {
     let ballSpeed = 3; // if level needs to be implemented, this variable should be changed
     const ballXDirection = Math.random() < 0.5 ? 1 : -1;
-    const ballYDirection = (Math.random() - 0.5) * 2;
+    let ballYDirection;
+    do {
+      ballYDirection = (Math.random() - 0.5) * 2; // range: [-1, 1]
+    } while (Math.abs(ballYDirection) < 0.3); // avoid almost horizontal direction
+
     return {
         ballX: GAME_WIDTH / 2,
         ballY: GAME_HEIGHT / 2,

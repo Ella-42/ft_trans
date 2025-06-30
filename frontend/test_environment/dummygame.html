@@ -28,7 +28,10 @@
     const ctx = canvas.getContext('2d');
     let socket = null;
     let paddleNumber = null;
+    let started = false;
     let gameOver = false;
+    const keyPressed = {};
+    let keyInt = null;
 
     function draw(game) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -68,6 +71,28 @@
       }
     }
 
+    // Send paddle movement with arrow keys
+    window.addEventListener('keydown', (e) => {
+      keyPressed[e.key] = true;
+      if (['ArrowUp', 'ArrowDown'].includes(e.key) && started) {
+        e.preventDefault(); // Prevent scrolling
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      keyPressed[e.key] = false;
+      if (['ArrowUp', 'ArrowDown'].includes(e.key) && started) {
+        e.preventDefault(); // Prevent scrolling
+      }
+    });
+
+    function handleInput() {
+      if (!socket || socket.readyState !== WebSocket.OPEN) return;
+      if (keyPressed['ArrowUp']) socket.send(JSON.stringify({ type: 'move', direction: 'up' }));
+      if (keyPressed['ArrowDown']) socket.send(JSON.stringify({ type: 'move', direction: 'down' }));
+    }
+
+// start connection
+
     function connect() {
       socket = new WebSocket(`wss://${location.hostname}/ws`);
 
@@ -86,11 +111,15 @@
         } else if (msg.type === 'ready_ack') {
           document.getElementById('status').textContent = 'Ready. Waiting for game start...';
         } else if (msg.type === 'game_start') {
+          keyInt = setInterval(handleInput, 1000 / 30);
+          started = true;
           document.getElementById('status').textContent = `Game started! You are player ${paddleNumber}`;
         } else if (msg.type === 'game_tick') {
           draw(msg.state);
         } else if (msg.type === 'game_over') {
           gameOver = true;
+          started = false;
+          clearInterval(keyInt);
           await currentId().then(currentUserId => {
             const isWinner = msg.winner.id === currentUserId;
             if (isWinner) {
@@ -118,16 +147,8 @@
       };
     }
 
-    // Send paddle movement with arrow keys
-    window.addEventListener('keydown', (e) => {
-      if (!socket || socket.readyState !== WebSocket.OPEN) return;
-      if (e.key === 'ArrowUp') {
-        socket.send(JSON.stringify({ type: 'move', direction: 'up' }));
-      } else if (e.key === 'ArrowDown') {
-        socket.send(JSON.stringify({ type: 'move', direction: 'down' }));
-      }
-    });
-
+    // run functions after loading the page
+  
     let myuid;
 
     window.addEventListener('load', async () => {
