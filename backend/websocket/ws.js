@@ -207,7 +207,7 @@ function createGame() {
     let ballYDirection;
     do {
       ballYDirection = (Math.random() - 0.5) * 2; // range: [-1, 1]
-    } while (Math.abs(ballYDirection) < 0.3); // avoid almost horizontal direction
+    } while (Math.abs(ballYDirection) < 0.15); // avoid almost horizontal direction
 
     return {
         ballX: GAME_WIDTH / 2,

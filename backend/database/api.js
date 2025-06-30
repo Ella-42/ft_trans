@@ -563,6 +563,20 @@ fastify.get('/api/users/:id/history', { preHandler: verifyToken }, async (reques
     }
 });
 
+// **13.1 Fetch user pong's wins and losses by ID**
+fastify.get('/api/users/:id/pong', { preHandler: verifyToken }, async (request, reply) => {
+    try {
+        const { id } = request.params;
+        const user = await dbGet('SELECT id, nickname, pong_wins, pong_losses FROM users WHERE id = ?', [id]);
+        if (!user) return reply.status(404).send({ error: 'User not found' });
+        reply.send(user);
+    } catch (err) {
+        reply.status(500).send({ error: 'Failed to fetch users' });
+    }
+});
+
+// **13.2 Update game history**
+
 const VALID_GAMES = ["pong"];
 
 internalFastify.post('/api/updateResult', async (request, reply) => {

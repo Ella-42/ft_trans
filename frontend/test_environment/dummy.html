@@ -307,6 +307,19 @@
             }
 
             try {
+                const user = await fetch(`/api/users/${userId}/pong`, {
+                method: 'GET',
+                credentials: 'include'
+                });
+
+                if (!user.ok) {
+                    const error = await user.json();
+                    output.textContent = `Error: ${user.status} - ${error.error}`;
+                    return;
+                }
+
+                const record = await user.json();
+
                 const response = await fetch(`/api/users/${userId}/history`, {
                 method: 'GET',
                 credentials: 'include'
@@ -325,6 +338,9 @@
                 } else {
                     const table = document.createElement('table');
                     const header = `
+                        <tr>
+                            <td colspan="4">Pong Wins: ${record.pong_wins}; Pong Losses: ${record.pong_losses}</td>
+                        </tr>
                         <tr>
                             <th>Date</th>
                             <th>Game</th>
