@@ -14,8 +14,8 @@
     "node-fetch": "^3.3.2",
     "jsonwebtoken": "^8.5.1",
     "@fastify/cors": "^8.2.1",
-    "@fastify/websocket": "^7.0.0",
-    "@fastify/cookie": "^9.0.0"
+    "@fastify/cookie": "^9.0.0",
+    "bcrypt" : "^5.1.1"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"

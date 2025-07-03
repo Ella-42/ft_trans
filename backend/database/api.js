@@ -3,6 +3,7 @@ import Fastify from 'fastify';
 import jwt from 'jsonwebtoken';
 import fastifyCors from '@fastify/cors';
 import fastifyCookie from '@fastify/cookie';
+import bcrypt from 'bcrypt';
 
 const { Database } = sqlite3;
 const domain = process.env.domain;
@@ -215,11 +216,10 @@ fastify.get('/api/users/:id/email', { preHandler: verifyToken }, async (request,
 fastify.post('/api/register', async (request, reply) => {
     try {
         const { name, email, password } = request.body;
-	    console.log("The email is: ", email);
-	    console.log("The password after hashing is: ", password);
         if (!password) return reply.status(400).send({ error: 'Password is required' });
         if (!email) return reply.status(400).send({ error: 'Email is required' });
         if (!name) return reply.status(400).send({ error: 'Nickname is required' });
+	    console.log("The email is: ", email);
         if (email && !emailRegex.test(email)) {
             return reply.status(400).send({ error: 'Invalid email format' });
         }
@@ -230,7 +230,9 @@ fastify.post('/api/register', async (request, reply) => {
         if (name && !nicknameRegex.test(name)) {
             return reply.status(400).send({ error: 'Nickname can only contain printable characters' });
         }
-        const result = await dbRun('INSERT INTO users (nickname, email, password) VALUES (?, ?, ?)', [name, email, password]);
+        const hashedPassword = await bcrypt.hash(password, 11);
+	    console.log("The password after hashing is: ", hashedPassword);
+        const result = await dbRun('INSERT INTO users (nickname, email, password) VALUES (?, ?, ?)', [name, email, hashedPassword]);
         reply.status(201).send({ id: result.lastID, name, email });
     } catch (err) {
         if (err.code === 'SQLITE_CONSTRAINT') {
@@ -310,7 +312,8 @@ fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply
         }
         // Perform the update
         if (!isEmptyOrNull(name) && !isEmptyOrNull(email) && !isEmptyOrNull(password)) {
-            const result = await dbRun('UPDATE users SET nickname = ?, email = ?, password = ? WHERE id = ?', [name, email, password, id]);
+            const hashedPassword = await bcrypt.hash(password, 11);
+            const result = await dbRun('UPDATE users SET nickname = ?, email = ?, password = ? WHERE id = ?', [name, email, hashedPassword, id]);
             if (!result.changes) return reply.status(204).send({ message: 'No changes made' });
             reply.status(200).send({ message: 'User updated successfully' });
             return ;
@@ -324,7 +327,8 @@ fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply
             if (newemail.changes) updated = 1;
         };
         if (!isEmptyOrNull(password)) {
-            const newpassword = await dbRun('UPDATE users SET password = ? WHERE id = ?', [password, id]);
+            const hashedPassword = await bcrypt.hash(password, 11);
+            const newpassword = await dbRun('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, id]);
             if (newpassword.changes) updated = 1;
         };
         if (!updated) return reply.status(204).send({ message: 'No changes made' });
@@ -397,10 +401,13 @@ fastify.post('/api/login', async (request, reply) => {
     const { email, password } = request.body;
     try {
         const user = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
-        if (!user || user.password !== password) {
+        if (!user) {
             return reply.status(401).send({ error: 'Invalid email or password' });
         }
-
+        const passwordOK = await bcrypt.compare(password, user.password);
+        if (!passwordOK) {
+            return reply.status(401).send({ error: 'Invalid email or password' });
+        }
         const token = jwt.sign({ id: user.id, email: user.email }, privateKey, { algorithm: 'RS256', expiresIn: '12h' });
         reply.setCookie('token', token, {
           signed: true,
