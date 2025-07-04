@@ -132,9 +132,12 @@ const verifyToken = async (request, reply) => {
         }
         if (!token.value) return reply.status(401).send({ error: 'Unauthorized: Invalid token' });
         const decoded = jwt.verify(token.value, publicKey, { algorithms: ['RS256'] });
+        const user = await dbGet('SELECT id FROM users WHERE id = ?', [decoded.id]);
+        if (!user) return reply.status(401).send({ error: 'Unauthorized: User not found' });
         request.user = decoded;
-        return ;
+        return true;
     } catch (err) {
+        console.log("Token verification failed");
         return reply.status(401).send({ error: 'Invalid token' });
     }
 };
