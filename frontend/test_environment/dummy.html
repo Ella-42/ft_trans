@@ -298,6 +298,9 @@
             currentUser();
         });
 
+        function isNumber(str) {
+            return /^-?\d+$/.test(str);
+        }
         async function fetchMatchHistory() {
             const userId = document.getElementById('historyuserId').value;
             const output = document.getElementById('historyoutput');
@@ -307,10 +310,29 @@
                 return;
             }
 
+            const pageInput = document.getElementById('historypage').value || '1' ;
+            const limitInput = document.getElementById('historylimit').value || '25' ;
+
+            if (!isNumber(pageInput) || !isNumber(limitInput)) {
+                output.textContent = 'Invalid input: only numbers are allowed.';
+                return;
+            }
+            const page = parseInt(pageInput, 10);
+            const limit = parseInt(limitInput, 10);
+
+            if (isNaN(page) || isNaN(limit) || page < 1 || limit < 1)
+            {
+                output.textContent = 'Invalid input.';
+                return;
+            }
+            if (limit > 100) {
+                output.textContent = 'Too many items per page (max 100).';
+                return;
+            }
             try {
                 const user = await fetch(`/api/users/${userId}/pong`, {
-                method: 'GET',
-                credentials: 'include'
+                    method: 'GET',
+                    credentials: 'include'
                 });
 
                 if (!user.ok) {
@@ -321,9 +343,9 @@
 
                 const record = await user.json();
 
-                const response = await fetch(`/api/users/${userId}/history`, {
-                method: 'GET',
-                credentials: 'include'
+                const response = await fetch(`/api/users/${userId}/history?page=${page}&limit=${limit}`, {
+                    method: 'GET',
+                    credentials: 'include',
                 });
 
                 if (!response.ok) {
@@ -334,13 +356,16 @@
 
                 const history = await response.json();
 
-                if (history.length === 0) {
+                if (history.results.length === 0) {
                     output.textContent = 'No match history found.';
                 } else {
                     const table = document.createElement('table');
                     const header = `
                         <tr>
-                            <td colspan="4">Pong Wins: ${record.pong_wins}; Pong Losses: ${record.pong_losses}</td>
+                            <td colspan="4">Pong Wins: ${record.pong_wins}; Pong Losses: ${record.pong_losses}; Number of records: ${history.totalCount}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4">Page: ${history.currentPage} of ${history.totalPages}. Records per page: ${history.limit}</td>
                         </tr>
                         <tr>
                             <th>Date</th>
@@ -348,7 +373,7 @@
                             <th>Winner</th>
                             <th>Loser</th>
                         </tr>`;
-                    const rows = history.map(match => `
+                    const rows = history.results.map(match => `
                         <tr>
                             <td>${new Date(match.time).toLocaleString()}</td>
                             <td>${match.game}</td>
@@ -401,7 +426,9 @@
     <button type="button" onclick="updateUser()">Update</button>
 
     <h2>Game History:</h2>
-    <input type="number" id="historyuserId" placeholder="Enter User ID" />
+    <label>User ID: <input type="number" id="historyuserId" placeholder="Enter User ID" /></label><br>
+    <label>Page: <input type="text" id="historypage" placeholder="1" /></label><br>
+    <label>Items per page: <input type="text" id="historylimit" placeholder="25" /></label><br>
     <button onclick="fetchMatchHistory()">Fetch History</button>
     <pre id="historyoutput"></pre>
 

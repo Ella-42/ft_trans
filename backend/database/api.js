@@ -550,10 +550,15 @@ fastify.post('/api/logout', async (request, reply) => {
 fastify.get('/api/users/:id/history', { preHandler: verifyToken }, async (request, reply) => {
     try {
         const { id } = request.params;
+        const page = parseInt(request.query.page) || 1;       // default page 1
+        const limit = parseInt(request.query.limit) || 25;     // default 25 per page
+        const offset = (page - 1) * limit;    // go to the correct starting entry in db.
+        const total = await dbGet(
+            'SELECT COUNT(*) AS count FROM matches WHERE winner = ? OR loser = ?', [id, id]
+        );    // Total number of history.
 
         const matches = await dbAll(
-          'SELECT * FROM matches WHERE winner = ? OR loser = ? ORDER BY time DESC LIMIT 25', [id, id]
-//Not sure if 25 is a good number
+          'SELECT * FROM matches WHERE winner = ? OR loser = ? ORDER BY time DESC LIMIT ? OFFSET ?', [id, id, limit, offset]
         );
 
         const matchesWithNick = [];
@@ -576,7 +581,12 @@ fastify.get('/api/users/:id/history', { preHandler: verifyToken }, async (reques
             }
           });
         }
-        reply.status(200).send(matchesWithNick);
+        reply.status(200).send({
+            totalCount: total.count,
+            currentPage: page,
+            limit,
+            totalPages: Math.ceil(total.count / limit),
+            results: matchesWithNick });
 
     } catch (err) {
         reply.status(500).send({ error: 'Failed to fetch match history' });
