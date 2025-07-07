@@ -293,11 +293,11 @@ fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply
         if (parseInt(id) !== request.user.id) {
             return reply.status(403).send({ error: 'Forbidden: You can only modify your own profile' });
         }
-        const { name, email, password } = request.body;
+        const { name, email, password, oldPassword } = request.body;
         let updated = 0;
 
         // Check if user exists before updating
-        const existingUser = await dbGet('SELECT id FROM users WHERE id = ?', [id]);
+        const existingUser = await dbGet('SELECT id, password FROM users WHERE id = ?', [id]);
         if (!existingUser) return reply.status(404).send({ error: 'User not found' });
 
         if (isEmptyOrNull(name) && isEmptyOrNull(email) && isEmptyOrNull(password)) {
@@ -313,6 +313,16 @@ fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply
         if (name && !nicknameRegex.test(name)) {
             return reply.status(400).send({ error: 'Nickname can only contain printable characters' });
         }
+        if ((email || password) && isEmptyOrNull(oldPassword)) {
+            return reply.status(400).send({ error: 'Old password is necessary for updating password and email address.' });
+        }
+        if ((email || password) && oldPassword) {
+            const passwordOK = await bcrypt.compare(oldPassword, existingUser.password);
+            if (!passwordOK) {
+                return reply.status(400).send({ error: 'Incorrect old password.' });
+            }
+        }
+
         // Perform the update
         if (!isEmptyOrNull(name) && !isEmptyOrNull(email) && !isEmptyOrNull(password)) {
             const hashedPassword = await bcrypt.hash(password, 11);

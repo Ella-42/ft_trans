@@ -43,6 +43,7 @@
             const name = document.getElementById('newname').value;
             const email = document.getElementById('newemail').value;
             const password = document.getElementById('newpassword').value;
+            const oldPassword = document.getElementById('oldpassword').value;
             const id = document.getElementById('id').value;
 
             if (!id) {
@@ -53,7 +54,7 @@
                 method: 'PUT',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password })
+                body: JSON.stringify({ name, email, password, oldPassword })
             });
 
             loadUsers();
@@ -396,6 +397,7 @@
     <input type="text" id="newname" placeholder="Name">
     <input type="email" id="newemail" placeholder="Email">
     <input type="password" id="newpassword" placeholder="Password">
+    <input type="password" id="oldpassword" placeholder="Old Password">
     <button type="button" onclick="updateUser()">Update</button>
 
     <h2>Game History:</h2>
