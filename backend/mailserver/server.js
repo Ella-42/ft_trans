@@ -59,7 +59,7 @@ function generateDkimHeader(headers, body)
 	return (`DKIM-Signature: ${dkimHeaderParams}${signature}\r\n`);
 }
 
-function sendMail(to, code)
+function sendMail(to, subject, body)
 {
 	let socket = tcpConnect(2525, smtpServer);
 
@@ -81,16 +81,15 @@ function sendMail(to, code)
 	[
 		['From', from],
 		['To', to],
-		['Subject', '2FA'],
+		['Subject', subject],
 		['Date', date]
 	];
-	const body = `Your one-time code is: ${code}`;
 	const dkimHeader = generateDkimHeader(headers, body);
 
 	const rawMail =
 		`From: ${from}\r\n` +
 		`To: ${to}\r\n` +
-		`Subject: 2FA\r\n` +
+		`Subject: ${subject}\r\n` +
 		`Date: ${date}\r\n` +
 		dkimHeader +
 		`\r\n${body}\r\n.\r\n`;
@@ -141,4 +140,4 @@ function sendMail(to, code)
 	.catch(console.error);
 }
 
-//sendMail('lpeeters@student.s19.be', '576733');
+//sendMail('lpeeters@student.s19.be', '2FA' 'Your one-time code is: 576733');

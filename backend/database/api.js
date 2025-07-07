@@ -225,18 +225,27 @@ fastify.post('/api/register', async (request, reply) => {
         if (!password) return reply.status(400).send({ error: 'Password is required' });
         if (!email) return reply.status(400).send({ error: 'Email is required' });
         if (!name) return reply.status(400).send({ error: 'Nickname is required' });
-        if (email && !emailRegex.test(email)) {
+        if (!emailRegex.test(email)) {
             return reply.status(400).send({ error: 'Invalid email format' });
         }
-        if (password && !passwordRegex.test(password)) {
+        if (!passwordRegex.test(password)) {
 //            return reply.status(400).send({ error: 'Password must be at least 8 characters long and contain letters and numbers' });
             return reply.status(400).send({ error: 'Password too short' });
         }
-        if (name && !nicknameRegex.test(name)) {
+        if (!nicknameRegex.test(name)) {
             return reply.status(400).send({ error: 'Nickname can only contain printable characters' });
         }
         const result = await dbRun('INSERT INTO users (nickname, email, password) VALUES (?, ?, ?)', [name, email, password]);
         reply.status(201).send({ id: result.lastID, name, email });
+		const mailToken = jwt.sign({ email }, privateKey, { algorithm: 'RS256', expiresIn: '15m' });
+		const response = await fetch('http://mailserver:2626/verify', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				to: email,
+				token: mailToken
+			})
+		});
     } catch (err) {
         if (err.code === 'SQLITE_CONSTRAINT') {
             return reply.status(400).send({ error: 'Email or nickname is already in use' });
@@ -568,7 +577,7 @@ fastify.get('/api/users/:id/history', { preHandler: verifyToken }, async (reques
     }
 });
 
-fastify.get('/api', async () => `Testing ${domain}`);
+fastify.get('/api', async () => `This is the ${domain}'s API`);
 
 
 fastify.get('/api/ws', { websocket: true }, (connection, request) => {
