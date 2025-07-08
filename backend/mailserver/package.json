@@ -3,6 +3,6 @@
 
   "scripts":
   {
-    "start": "node client.js"
+    "start": "node mail.js"
   }
 }

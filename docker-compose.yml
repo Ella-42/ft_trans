@@ -70,6 +70,7 @@ services:
     env_file: .smtp_credentials.env
     environment:
       - domain=ella-peeters.me
+      - subDomain=trans.ella-peeters.me
     depends_on:
       - database
     networks:
@@ -80,8 +81,9 @@ services:
     volumes:
       - /home/lpeeters/.ssh/ella-peeters.me_dkim_public.key:/etc/ssh/ella-peeters.me_dkim_public.key:ro #Mount public DKIM key
       - /home/lpeeters/.ssh/ella-peeters.me_dkim_private.key:/etc/ssh/ella-peeters.me_dkim_private.key:ro #Mount private DKIM key
-      - ./backend/mailserver/mail.js:/srv/mail.js:ro
       - ./backend/mailserver/server.js:/srv/server.js:ro
+      - ./backend/mailserver/mail.js:/srv/mail.js:ro
+      - ./backend/mailserver/mail.html:/srv/mail.html:ro
       - ./backend/mailserver/package.json:/srv/package.json:ro
 
 volumes:
