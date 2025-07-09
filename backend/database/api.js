@@ -640,14 +640,6 @@ internalFastify.post('/api/updateResult', async (request, reply) => {
 
 fastify.get('/api', async () => `This is the ${domain}'s API`);
 
-
-fastify.get('/api/ws', { websocket: true }, (connection, request) => {
-    console.log('WebSocket connection established');
-    connection.socket.on('message', message => {
-        connection.socket.send('Hello from server!');
-    });
-});
-
 fastify.listen({ host: '0.0.0.0', port: 3443 }, err => {
     if (err) throw err;
     console.log(`Server running on https://${domain}/api`);
