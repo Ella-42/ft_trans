@@ -14,6 +14,7 @@ services:
       - nginx-database
       - authenticator-nginx
       - mailserver-nginx
+      - ws-nginx
     ports:
       - "80:80" #Http (-> https)
       - "443:443" #Https
@@ -41,6 +42,7 @@ services:
       - nginx-database
       - mailserver-database
       - authenticator-database
+      - ws-database
     volumes:
       - db-volume:/var/www/db
       - ./backend/database/api.js:/var/www/js/api.js:ro
@@ -58,8 +60,8 @@ services:
     depends_on:
       - nginx
     networks:
-      - frontend #Connects to Nginx
-      - database #Connects to database
+      - ws-nginx #Connects to Nginx
+      - ws-database #Connects to database
     volumes:
       - ./backend/websocket/ws.js:/var/www/ws/ws.js:ro
 
@@ -119,3 +121,6 @@ networks:
   authenticator-database:
   mailserver-nginx:
   mailserver-database:
+  ws-database:
+  ws-nginx:
+  
