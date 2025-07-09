@@ -11,8 +11,9 @@ services:
     environment:
       - domain=trans.ella-peeters.me
     networks:
-      - frontend #Connects to database
-      - backend #Connects to backend
+      - nginx-database
+      - authenticator-nginx
+      - mailserver-nginx
     ports:
       - "80:80" #Http (-> https)
       - "443:443" #Https
@@ -37,8 +38,9 @@ services:
     depends_on:
       - nginx
     networks:
-      - frontend #Connects to Nginx
-      - database #Connects to authenticator
+      - nginx-database
+      - mailserver-database
+      - authenticator-database
     volumes:
       - db-volume:/var/www/db
       - ./backend/database/api.js:/var/www/js/api.js:ro
@@ -72,8 +74,8 @@ services:
     depends_on:
       - database
     networks:
-      - database #Connects to database
-      - backend #Connects to Nginx
+      - authenticator-nginx
+      - authenticator-database
     volumes:
       - ./backend/authenticator/google_authenticator.js:/srv/google_authenticator.js:ro
       - ./backend/authenticator/package.json:/srv/package.json:ro
@@ -86,17 +88,20 @@ services:
     env_file: .smtp_credentials.env
     environment:
       - domain=ella-peeters.me
+      - subDomain=trans.ella-peeters.me
     depends_on:
       - database
-    #networks:
-      #- database #Connects to database
-      #- backend #Connects to Nginx
+    networks:
+      - mailserver-nginx
+      - mailserver-database
     ports:
       - "2525:2525" #Mailgun
     volumes:
       - /home/lpeeters/.ssh/ella-peeters.me_dkim_public.key:/etc/ssh/ella-peeters.me_dkim_public.key:ro #Mount public DKIM key
       - /home/lpeeters/.ssh/ella-peeters.me_dkim_private.key:/etc/ssh/ella-peeters.me_dkim_private.key:ro #Mount private DKIM key
-      - ./backend/mailserver/client.js:/srv/client.js:ro
+      - ./backend/mailserver/server.js:/srv/server.js:ro
+      - ./backend/mailserver/mail.js:/srv/mail.js:ro
+      - ./backend/mailserver/mail.html:/srv/mail.html:ro
       - ./backend/mailserver/package.json:/srv/package.json:ro
 
 volumes:
@@ -109,6 +114,8 @@ volumes:
 
 # Networks for frontend and backend
 networks:
-  frontend:
-  backend:
-  database:
+  nginx-database:
+  authenticator-nginx:
+  authenticator-database:
+  mailserver-nginx:
+  mailserver-database:

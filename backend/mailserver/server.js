@@ -1,9 +1,10 @@
-import { config } from 'dotenv';
-import { readFileSync } from 'fs';
-import { connect as tcpConnect } from 'net';
-import { connect as tlsConnect } from 'tls';
-import crypto from 'crypto';
+import { config } from 'dotenv'; //load environment variables
+import { readFileSync } from 'fs'; //read files from system
+import { connect as tcpConnect } from 'net'; //open tcp connection
+import { connect as tlsConnect } from 'tls'; //open tls connection
+import crypto from 'crypto'; //encryption
 
+// Load variables
 config();
 const domain = process.env.domain;
 
@@ -11,6 +12,7 @@ const dkimPrivateKey = readFileSync(`/etc/ssh/${domain}_dkim_private.key`, 'utf-
 const smtpServer = 'smtp.eu.mailgun.org'; //for SMTP port as DigitalOcean blocks them all
 const from = `no-reply@${domain}`;
 
+// Format headers
 function canonicalizeHeaders(headers, dkimHeaders)
 {
 	return (headers
@@ -21,6 +23,7 @@ function canonicalizeHeaders(headers, dkimHeaders)
 	);
 }
 
+// Format body
 function canonicalizeBody(body)
 {
 	const lines = body.split(/\r?\n/);
@@ -31,6 +34,7 @@ function canonicalizeBody(body)
 	return (lines.join('\r\n') + '\r\n');
 }
 
+// Format and sign DKIM headers
 function generateDkimHeader(headers, body)
 {
 	const dkimHeaders = ['from', 'to', 'subject', 'date'];
@@ -59,10 +63,13 @@ function generateDkimHeader(headers, body)
 	return (`DKIM-Signature: ${dkimHeaderParams}${signature}\r\n`);
 }
 
-function sendMail(to, code)
+// Connect to SMTP server, format email and send it using SMTP
+export function sendMail(to, subject, body)
 {
+	// Fake bs port bcs nobody trusts anyone over mail protocol
 	let socket = tcpConnect(2525, smtpServer);
 
+	// Helper functions
 	const sendCommand = (command) => socket.write(command + '\r\n');
 	const readResponse = () =>
 		new Promise(resolve => socket.once('data', data => resolve(data.toString())));
@@ -76,25 +83,28 @@ function sendMail(to, code)
 		return (readResponse());
 	};
 
+	// Formatting
 	const date = new Date().toUTCString();
 	const headers =
 	[
 		['From', from],
 		['To', to],
-		['Subject', '2FA'],
-		['Date', date]
+		['Subject', subject],
+		['Date', date],
+		['Content-Type', 'text/html; charset=UTF-8']
 	];
-	const body = `Your one-time code is: ${code}`;
 	const dkimHeader = generateDkimHeader(headers, body);
 
 	const rawMail =
 		`From: ${from}\r\n` +
 		`To: ${to}\r\n` +
-		`Subject: 2FA\r\n` +
+		`Subject: ${subject}\r\n` +
 		`Date: ${date}\r\n` +
+		'Content-Type: text/html; charset=UTF-8\r\n' +
 		dkimHeader +
 		`\r\n${body}\r\n.\r\n`;
 
+	// Start up connection
 	return (new Promise
 	(
 		(resolve, reject) =>
@@ -106,6 +116,7 @@ function sendMail(to, code)
 
 	.then(() => readResponse())
 
+	// If anyone's there, upgrade to secure connection
 	.then(handleResponse('220', 'No 220', `EHLO ${domain}`))
 	.then(handleResponse('250', 'EHLO failed', `STARTTLS`))
 
@@ -128,6 +139,7 @@ function sendMail(to, code)
 		});
 	})
 
+	// Log in to SMTP server and talk SMTP to them to send the email
 	.then(handleResponse('250', 'EHLO failed', `AUTH LOGIN`))
 	.then(handleResponse('334', 'AUTH LOGIN failed', Buffer.from(process.env.SMTP_USER).toString('base64')))
 	.then(handleResponse('334', 'SMTP user rejected', Buffer.from(process.env.SMTP_PASSWORD).toString('base64')))
@@ -137,8 +149,7 @@ function sendMail(to, code)
 	.then(handleResponse('354', 'DATA failed', rawMail))
 	.then(handleResponse('250', 'Send failed', 'QUIT'))
 
-	.then(() => { socket.end() })
-	.catch(console.error);
+	// Close the socket, in case anything went wrong, log the error based on the server's response
+	.catch(console.error)
+	.finally(() => { socket.end() });
 }
-
-//sendMail('lpeeters@student.s19.be', '576733');
