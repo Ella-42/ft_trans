@@ -4,7 +4,7 @@ import { readFileSync } from 'fs';
 
 const app = Fastify();
 
-const sendVerification = endpoint => (request, response) =>
+const sendVerification = (endpoint, wording) => (request, response) =>
 {
 	const { to, token } = request.body;
 
@@ -13,7 +13,8 @@ const sendVerification = endpoint => (request, response) =>
 		to,
 		'Email Verification Required for Pong Account',
 		readFileSync('./mail.html', 'utf-8')
-		.replace(/ERROR/g, `https://${process.env.subDomain}/api/${endpoint}?token=${token}`)
+		.replace(/URL_ERROR/g, `https://${process.env.subDomain}/api/${endpoint}?token=${token}`)
+		.replace('WORDING_ERROR', wording)
 	)
 
 	.then(() =>
@@ -29,8 +30,8 @@ const sendVerification = endpoint => (request, response) =>
 	})
 }
 
-app.post('/verify', sendVerification('verify'));
+app.post('/verify', sendVerification('verify', 'activated'));
 
-app.post('/update', sendVerification('update'));
+app.post('/update', sendVerification('update', 'updated'));
 
 app.listen({ host: '0.0.0.0', port: 2626 });

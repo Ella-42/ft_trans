@@ -120,7 +120,47 @@ const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
     });
 });
 
-// **Verify Token**
+// **Mail**
+
+const mail = async (to, token, endpoint) => {
+	const response = await fetch(`http://mailserver:2626/${endpoint}`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			to,
+			token
+		})
+	});
+	if (!response.ok) console.error(`Mailserver failed: ${response.status}: ${(await response.json()).error}`);
+}
+
+const autoClose = (wording, reply) => {
+	reply.type('text/html').send(`<h2 align="center">Email ${wording} successfully!</h2><script>setTimeout(() => window.close(), 3000);</script>`);
+}
+
+// **Token handlers**
+
+const jwtSend = (id, reply) => {
+	const token = jwt.sign({ id }, privateKey, { algorithm: 'RS256', expiresIn: '12h' });
+	reply.setCookie('token', token, {
+		signed: true,
+		httpOnly: true,
+		secure: true,
+		sameSite: 'Strict',
+		path: '/',
+		maxAge: 60 * 60 * 12 // 12 hours
+	}).send({ ok: true });
+}
+
+const decode = async (request, reply) => {
+	const { token } = request.query;
+	if (!token) return reply.status(401).send({ error: 'Unauthorized: No token provided' });
+	try {
+		request.decoded = jwt.verify(token, publicKey, { algorithms: ['RS256'] });
+	} catch {
+		return reply.status(401).send({ error: 'Unauthorized: Invalid token' });
+	}
+}
 
 const verifyToken = async (request, reply) => {
     try {
@@ -138,7 +178,7 @@ const verifyToken = async (request, reply) => {
         request.user = decoded;
         return true;
     } catch (err) {
-        console.log("Token verification failed");
+        console.error("Token verification failed");
         return reply.status(401).send({ error: 'Invalid token' });
     }
 };
@@ -179,38 +219,22 @@ fastify.get('/api/users/verifytoken', { preHandler: verifyToken }, async (reques
     }
 });
 
-fastify.get('/api/verify', async (request, reply) => {
-	const { token } = request.query;
-	if (!token) return reply.status(401).send({ error: 'Unauthorized: No token provided' });
-	let decoded;
+fastify.get('/api/verify', { preHandler: decode }, async (request, reply) => {
 	try {
-		decoded = jwt.verify(token, publicKey, { algorithms: ['RS256'] });
-	} catch (error) {
-		return reply.status(401).send({ error: 'Unauthorized: Invalid token' });
-	}
-	try {
-		await dbRun('UPDATE users SET verified = 1 WHERE email = ?', [decoded.email]);
+		await dbRun('UPDATE users SET verified = 1 WHERE email = ?', [request.decoded.email]);
 	} catch {
 		return reply.status(500).send({ error: 'Failed to verify email' });
 	}
-	reply.status(200).send({ message: 'Email verified successfully' });
+	autoClose('verified', reply);
 });
 
-fastify.get('/api/update', async (request, reply) => {
-	const { token } = request.query;
-	if (!token) return reply.status(401).send({ error: 'Unauthorized: No token provided' });
-	let decoded;
+fastify.get('/api/update', { preHandler: decode }, async (request, reply) => {
 	try {
-		decoded = jwt.verify(token, publicKey, { algorithms: ['RS256'] });
-	} catch (error) {
-		return reply.status(401).send({ error: 'Unauthorized: Invalid token' });
-	}
-	try {
-		await dbRun('UPDATE users SET email = ? WHERE email = ?', [decoded.newMail, decoded.oldMail]);
+		await dbRun('UPDATE users SET email = ? WHERE email = ?', [request.decoded.newMail, request.decoded.oldMail]);
 	} catch {
 		return reply.status(500).send({ error: 'Failed to update email' });
 	}
-	reply.status(200).send({ message: 'Email updated successfully' });
+	autoClose('updated', reply);
 });
 
 // **1. Fetch all users**
@@ -269,19 +293,11 @@ fastify.post('/api/register', async (request, reply) => {
             return reply.status(400).send({ error: 'Nickname can only contain printable characters' });
         }
         const hashedPassword = await bcrypt.hash(password, 11);
-	    console.log("The password after hashing is: ", hashedPassword);
+		//console.log("The password after hashing is: ", hashedPassword);
         const result = await dbRun('INSERT INTO users (nickname, email, password) VALUES (?, ?, ?)', [name, email, hashedPassword]);
         reply.status(201).send({ id: result.lastID, name, email });
 		const mailToken = jwt.sign({ email }, privateKey, { algorithm: 'RS256', expiresIn: '15m' });
-		const response = await fetch('http://mailserver:2626/verify', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				to: email,
-				token: mailToken
-			})
-		});
-		if (!response.ok) console.error(`Mailserver failed: ${response.status}: ${(await response.json()).error}`);
+		await mail(email, mailToken, 'verify');
     } catch (err) {
         if (err.code === 'SQLITE_CONSTRAINT') {
             return reply.status(400).send({ error: 'Email or nickname is already in use' });
@@ -311,14 +327,7 @@ internalFastify.post('/api/google_register', async (request, reply) => {
 		else return reply.status(500).send({ error: 'Failed to add user' });
 	}
 	try {
-		const token = jwt.sign({ id: result.lastID, email }, privateKey, { algorithm: 'RS256', expiresIn: '12h' });
-		reply.setCookie('token', token, {
-			httpOnly: true,
-			secure: true,
-			sameSite: 'Strict',
-			path: '/',
-			maxAge: 60 * 60 * 12 // 12 hours
-		}).send({ success: true });
+		jwtSend(result.lastID, reply);
 	} catch (err) {
 		console.error(err);
 		reply.status(500).send({ error: 'Failed to set cookie' });
@@ -331,7 +340,7 @@ function isEmptyOrNull(str) {
     return str === null || str === "" || str === undefined;
 };
 
-// TODO: please rewrite this
+// TODO: please rewrite the entire logic
 fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply) => {
     try {
         const { id } = request.params;
@@ -376,16 +385,7 @@ fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply
 			if (!result.changes) return reply.status(204).send({ message: 'No changes made' });
 			reply.status(200).send({ message: 'User updated successfully, note: new email has to be verified' });
 			const mailToken = jwt.sign({ oldMail: existingUser.email, newMail: email }, privateKey, { algorithm: 'RS256', expiresIn: '15m' });
-			const response = await fetch('http://mailserver:2626/update', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					to: email,
-					token: mailToken
-				})
-			});
-			if (!response.ok) console.error(`Mailserver failed: ${response.status}: ${(await response.json()).error}`);
-			return ;
+			return await mail(email, mailToken, 'update');
 		}
         if (!isEmptyOrNull(name)) {
             const newname = await dbRun('UPDATE users SET nickname = ? WHERE id = ?', [name, id]);
@@ -401,16 +401,7 @@ fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply
         if (updated === 2) {
 			reply.status(200).send({ message: 'New email has to be verified before it can be updated' });
 			const mailToken = jwt.sign({ oldMail: existingUser.email, newMail: email }, privateKey, { algorithm: 'RS256', expiresIn: '15m' });
-			const response = await fetch('http://mailserver:2626/update', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					to: email,
-					token: mailToken
-				})
-			});
-			if (!response.ok) console.error(`Mailserver failed: ${response.status}: ${(await response.json()).error}`);
-			return ;
+			return await mail(email, mailToken, 'update');
 		}
         reply.status(200).send({ message: 'User updated successfully' });
     } catch (err) {
@@ -489,16 +480,7 @@ fastify.post('/api/login', async (request, reply) => {
             return reply.status(401).send({ error: 'Invalid email or password' });
         }
 		if (!user.verified) return reply.status(401).send({ error: 'Unauthorized: email unverified' });
-
-        const token = jwt.sign({ id: user.id, email: user.email }, privateKey, { algorithm: 'RS256', expiresIn: '12h' });
-        reply.setCookie('token', token, {
-          signed: true,
-          httpOnly: true,
-          secure: true,
-          sameSite: 'Strict',
-          path: '/',
-          maxAge: 60 * 60 * 12 // 12 hours
-        }).send({ success: true });
+		jwtSend(user.id, reply);
     } catch (err) {
         reply.status(500).send({ error: 'An error occurred while logging in' });
     }
