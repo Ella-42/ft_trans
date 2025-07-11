@@ -1,11 +1,9 @@
-import { config } from 'dotenv'; //load environment variables
 import { readFileSync } from 'fs'; //read files from system
 import { connect as tcpConnect } from 'net'; //open tcp connection
 import { connect as tlsConnect } from 'tls'; //open tls connection
 import crypto from 'crypto'; //encryption
 
 // Load variables
-config();
 const domain = process.env.domain;
 
 const dkimPrivateKey = readFileSync(`/etc/ssh/${domain}_dkim_private.key`, 'utf-8');
@@ -123,7 +121,7 @@ export function sendMail(to, subject, body)
 	.then((response) =>
 	{
 		if (!response.startsWith('220'))
-			throw new Error('STARTTLS failed');
+			throw new Error(`STARTTLS failed; full response: ${response}`);
 
 		return (new Promise((resolve, reject) =>
 		{

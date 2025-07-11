@@ -1,10 +1,7 @@
-// Get dotenv for environment variable processing
-import dotenv from 'dotenv';
 // Get Fastify for network traffic handling
 import Fastify from 'fastify';
 
 // Load environment variables
-dotenv.config();
 const clientID = process.env.GOOGLE_CLIENT_ID;
 const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 const redirectURI = process.env.GOOGLE_CALLBACK_URL;
