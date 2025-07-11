@@ -26,7 +26,8 @@
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-
+            document.getElementById("password").type = "password";
+            document.getElementById('regshow').checked = false;
             const res = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -43,17 +44,21 @@
             const name = document.getElementById('newname').value;
             const email = document.getElementById('newemail').value;
             const password = document.getElementById('newpassword').value;
+            const oldPassword = document.getElementById('oldpassword').value;
             const id = document.getElementById('id').value;
 
             if (!id) {
                 alert("User ID is required to update a user!");
                 return;
             }
+            document.getElementById("oldpassword").type = "password";
+            document.getElementById("newpassword").type = "password";
+            document.getElementById('updateshow').checked = false;
             const res = await fetch(`/api/users/${id}`, {
                 method: 'PUT',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password })
+                body: JSON.stringify({ name, email, password, oldPassword })
             });
 
             loadUsers();
@@ -205,7 +210,8 @@
 
                 const email = document.getElementById("loginemail").value;
                 const password = document.getElementById("loginpassword").value;
-                
+                document.getElementById("loginpassword").type = "password";
+                document.getElementById('loginshow').checked = false;
                 try {
                     const response = await fetch('/api/login', {
                         method: 'POST',
@@ -296,6 +302,131 @@
             loadUsers();
             currentUser();
         });
+
+        function isNumber(str) {
+            return /^-?\d+$/.test(str);
+        }
+        async function fetchMatchHistory() {
+            const userId = document.getElementById('historyuserId').value;
+            const output = document.getElementById('historyoutput');
+
+            if (!userId) {
+                output.textContent = 'Please enter a user ID.';
+                return;
+            }
+
+            const pageInput = document.getElementById('historypage').value || '1' ;
+            const limitInput = document.getElementById('historylimit').value || '25' ;
+
+            if (!isNumber(pageInput) || !isNumber(limitInput)) {
+                output.textContent = 'Invalid input: only numbers are allowed.';
+                return;
+            }
+            const page = parseInt(pageInput, 10);
+            const limit = parseInt(limitInput, 10);
+
+            if (isNaN(page) || isNaN(limit) || page < 1 || limit < 1)
+            {
+                output.textContent = 'Invalid input.';
+                return;
+            }
+            if (limit > 100) {
+                output.textContent = 'Too many items per page (max 100).';
+                return;
+            }
+            try {
+                const user = await fetch(`/api/users/${userId}/pong`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                if (!user.ok) {
+                    const error = await user.json();
+                    output.textContent = `Error: ${user.status} - ${error.error}`;
+                    return;
+                }
+
+                const record = await user.json();
+
+                const response = await fetch(`/api/users/${userId}/history?page=${page}&limit=${limit}`, {
+                    method: 'GET',
+                    credentials: 'include',
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    output.textContent = `Error: ${response.status} - ${error.error}`;
+                    return;
+                }
+
+                const history = await response.json();
+
+                if (history.results.length === 0) {
+                    output.textContent = 'No match history found.';
+                } else {
+                    const table = document.createElement('table');
+                    const header = `
+                        <tr>
+                            <td colspan="4">Pong Wins: ${record.pong_wins}; Pong Losses: ${record.pong_losses}; Number of records: ${history.totalCount}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4">Page: ${history.currentPage} of ${history.totalPages}. Records per page: ${history.limit}</td>
+                        </tr>
+                        <tr>
+                            <th>Date</th>
+                            <th>Game</th>
+                            <th>Winner</th>
+                            <th>Loser</th>
+                        </tr>`;
+                    const rows = history.results.map(match => `
+                        <tr>
+                            <td>${new Date(match.time).toLocaleString()}</td>
+                            <td>${match.game}</td>
+                            <td>${match.winner.nickname} (ID: ${match.winner.id})</td>
+                            <td>${match.loser.nickname} (ID: ${match.loser.id})</td>
+                        </tr>`).join('');
+                    table.innerHTML = header + rows;
+                    output.innerHTML = '';
+                    output.appendChild(table);
+                }
+
+            } catch (err) {
+                output.textContent = 'Error fetching match history: ' + err.message;
+            }
+        }
+
+        function showRegPassword() {
+            var x = document.getElementById("password");
+            if (x.type === "password") {
+                x.type = "text";
+            } else {
+                x.type = "password";
+            }
+        }
+
+        function showLoginPassword() {
+            var x = document.getElementById("loginpassword");
+            if (x.type === "password") {
+                x.type = "text";
+            } else {
+                x.type = "password";
+            }
+        }
+
+        function showChangePassword() {
+            var x = document.getElementById("newpassword");
+            if (x.type === "password") {
+                x.type = "text";
+            } else {
+                x.type = "password";
+            }
+            var x = document.getElementById("oldpassword");
+            if (x.type === "password") {
+                x.type = "text";
+            } else {
+                x.type = "password";
+            }
+        }
     </script>
 </head>
 <body>
@@ -305,18 +436,21 @@
 
     <h2>Current user:</h2>
     <p id="currentUser"></p>
+    <p style = "font-size: large;"><a href = "dummygame.html">Click here to start game after logging in.</a></p>
+    <p style = "font-size: large;"><a href = "dummygamelocal.html">Local game without logging in.</a></p>
     
     <h2>Add User</h2>
     <input type="text" id="name" placeholder="Name">
     <input type="email" id="email" placeholder="Email">
     <input type="password" id="password" placeholder="Password">
+    <input type="checkbox" id="regshow" onclick="showRegPassword()"><label>Show Password</label>
     <button type="button" onclick="addUser()">Add</button>
 
     <h2>Login</h2>
 
     <form id="loginForm">
       <label>Email: <input type="email" id="loginemail" required></label><br>
-      <label>Password: <input type="password" id="loginpassword" required></label><br>
+      <label>Password: <input type="password" id="loginpassword" required><input type="checkbox" id="loginshow" onclick="showLoginPassword()">Show Password</label><br>
       <button type="submit">Login</button>
       <button type="button" onclick="logout()">Logout</button>
       <button type="button" onclick="checktoken()">Check Token</button>
@@ -327,7 +461,16 @@
     <input type="text" id="newname" placeholder="Name">
     <input type="email" id="newemail" placeholder="Email">
     <input type="password" id="newpassword" placeholder="Password">
+    <input type="password" id="oldpassword" placeholder="Old Password">
+    <input type="checkbox" id="updateshow" onclick="showChangePassword()"><label>Show Password</label>
     <button type="button" onclick="updateUser()">Update</button>
+
+    <h2>Game History:</h2>
+    <label>User ID: <input type="number" id="historyuserId" placeholder="Enter User ID" /></label><br>
+    <label>Page: <input type="text" id="historypage" placeholder="1" /></label><br>
+    <label>Items per page: <input type="text" id="historylimit" placeholder="25" /></label><br>
+    <button onclick="fetchMatchHistory()">Fetch History</button>
+    <pre id="historyoutput"></pre>
 
     <h1>Friends Management</h1>
     <ul id="friends"></ul>

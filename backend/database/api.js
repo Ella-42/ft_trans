@@ -1,10 +1,9 @@
 import sqlite3 from 'sqlite3';
 import Fastify from 'fastify';
 import jwt from 'jsonwebtoken';
-import fastifyWebsocket from '@fastify/websocket';
 import fastifyCors from '@fastify/cors';
 import fastifyCookie from '@fastify/cookie';
-//import { addGameWin, addGameLoss } from './game_tools.js';
+import bcrypt from 'bcrypt';
 
 const { Database } = sqlite3;
 const domain = process.env.domain;
@@ -47,9 +46,6 @@ await registerCors(internalFastify);
 
 await registerCookie(fastify);
 await registerCookie(internalFastify);
-
-// Register WebSocket plugin
-fastify.register(fastifyWebsocket);
 
 // Initialize SQLite database
 const db = new Database('/var/www/db/pong.sqlite', sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
@@ -137,9 +133,12 @@ const verifyToken = async (request, reply) => {
         }
         if (!token.value) return reply.status(401).send({ error: 'Unauthorized: Invalid token' });
         const decoded = jwt.verify(token.value, publicKey, { algorithms: ['RS256'] });
+        const user = await dbGet('SELECT id FROM users WHERE id = ?', [decoded.id]);
+        if (!user) return reply.status(401).send({ error: 'Unauthorized: User not found' });
         request.user = decoded;
-        return ;
+        return true;
     } catch (err) {
+        console.log("Token verification failed");
         return reply.status(401).send({ error: 'Invalid token' });
     }
 };
@@ -255,11 +254,10 @@ fastify.get('/api/users/:id/email', { preHandler: verifyToken }, async (request,
 fastify.post('/api/register', async (request, reply) => {
     try {
         const { name, email, password } = request.body;
-	    console.log("The email is: ", email);
-	    console.log("The password after hashing is: ", password); //TODO: hashing
         if (!password) return reply.status(400).send({ error: 'Password is required' });
         if (!email) return reply.status(400).send({ error: 'Email is required' });
         if (!name) return reply.status(400).send({ error: 'Nickname is required' });
+	    console.log("The email is: ", email);
         if (!emailRegex.test(email)) {
             return reply.status(400).send({ error: 'Invalid email format' });
         }
@@ -270,7 +268,9 @@ fastify.post('/api/register', async (request, reply) => {
         if (!nicknameRegex.test(name)) {
             return reply.status(400).send({ error: 'Nickname can only contain printable characters' });
         }
-        const result = await dbRun('INSERT INTO users (nickname, email, password) VALUES (?, ?, ?)', [name, email, password]);
+        const hashedPassword = await bcrypt.hash(password, 11);
+	    console.log("The password after hashing is: ", hashedPassword);
+        const result = await dbRun('INSERT INTO users (nickname, email, password) VALUES (?, ?, ?)', [name, email, hashedPassword]);
         reply.status(201).send({ id: result.lastID, name, email });
 		const mailToken = jwt.sign({ email }, privateKey, { algorithm: 'RS256', expiresIn: '15m' });
 		const response = await fetch('http://mailserver:2626/verify', {
@@ -338,11 +338,12 @@ fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply
         if (parseInt(id) !== request.user.id) {
             return reply.status(403).send({ error: 'Forbidden: You can only modify your own profile' });
         }
-        const { name, email, password } = request.body;
+        const { name, email, password, oldPassword } = request.body;
         let updated = 0;
 
         // Check if user exists before updating
-        const existingUser = await dbGet('SELECT email FROM users WHERE id = ?', [id]);
+
+        const existingUser = await dbGet('SELECT email, password FROM users WHERE id = ?', [id]);
         if (!existingUser) return reply.status(404).send({ error: 'User not found' });
 
         if (isEmptyOrNull(name) && isEmptyOrNull(email) && isEmptyOrNull(password)) {
@@ -358,9 +359,20 @@ fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply
         if (name && !nicknameRegex.test(name)) {
             return reply.status(400).send({ error: 'Nickname can only contain printable characters' });
         }
+        if ((email || password) && isEmptyOrNull(oldPassword)) {
+            return reply.status(400).send({ error: 'Old password is necessary for updating password and email address.' });
+        }
+        if ((email || password) && oldPassword) {
+            const passwordOK = await bcrypt.compare(oldPassword, existingUser.password);
+            if (!passwordOK) {
+                return reply.status(400).send({ error: 'Incorrect old password.' });
+            }
+        }
+
         // Perform the update
 		if (!isEmptyOrNull(name) && !isEmptyOrNull(email) && !isEmptyOrNull(password)) {
-			const result = await dbRun('UPDATE users SET nickname = ?, password = ? WHERE id = ?', [name, password, id]);
+			const hashedPassword = await bcrypt.hash(password, 11);
+			const result = await dbRun('UPDATE users SET nickname = ?, password = ? WHERE id = ?', [name, hashedPassword, id]);
 			if (!result.changes) return reply.status(204).send({ message: 'No changes made' });
 			reply.status(200).send({ message: 'User updated successfully, note: new email has to be verified' });
 			const mailToken = jwt.sign({ oldMail: existingUser.email, newMail: email }, privateKey, { algorithm: 'RS256', expiresIn: '15m' });
@@ -381,7 +393,8 @@ fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply
         }
         if (!isEmptyOrNull(email)) updated = 2;
         if (!isEmptyOrNull(password)) {
-            const newpassword = await dbRun('UPDATE users SET password = ? WHERE id = ?', [password, id]);
+            const hashedPassword = await bcrypt.hash(password, 11);
+            const newpassword = await dbRun('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, id]);
             if (newpassword.changes) updated = 1;
         }
         if (!updated) return reply.status(204).send({ message: 'No changes made' })
@@ -468,7 +481,11 @@ fastify.post('/api/login', async (request, reply) => {
     const { email, password } = request.body;
     try {
         const user = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
-        if (!user || user.password !== password) {
+        if (!user) {
+            return reply.status(401).send({ error: 'Invalid email or password' });
+        }
+        const passwordOK = await bcrypt.compare(password, user.password);
+        if (!passwordOK) {
             return reply.status(401).send({ error: 'Invalid email or password' });
         }
 		if (!user.verified) return reply.status(401).send({ error: 'Unauthorized: email unverified' });
@@ -576,14 +593,14 @@ fastify.delete('/api/users/:id/friends', { preHandler: verifyToken }, async (req
 fastify.get('/api/whoami', { preHandler: checkLoginInStatus }, async (request, reply) => {
     try {
         if (!request.user) {
-            return reply.send({ nickname: "guest" });
+            return reply.send({ nickname: "guest", id: -1 });
         }
         const id = request.user.id;
         const user = await dbGet('SELECT nickname FROM users WHERE id = ?', [id]);
         if (!user) {
-            return reply.send({ nickname: "guest" });
+            return reply.send({ nickname: "guest", id: -1 });
         }
-        return reply.send({ nickname: user.nickname, id: user.id });
+        return reply.send({ nickname: user.nickname, id: id });
     } catch (err) {
         reply.status(500).send({ error: 'Failed to fetch username' });
     }
@@ -602,10 +619,15 @@ fastify.post('/api/logout', async (request, reply) => {
 fastify.get('/api/users/:id/history', { preHandler: verifyToken }, async (request, reply) => {
     try {
         const { id } = request.params;
+        const page = parseInt(request.query.page) || 1;       // default page 1
+        const limit = parseInt(request.query.limit) || 25;     // default 25 per page
+        const offset = (page - 1) * limit;    // go to the correct starting entry in db.
+        const total = await dbGet(
+            'SELECT COUNT(*) AS count FROM matches WHERE winner = ? OR loser = ?', [id, id]
+        );    // Total number of history.
 
-        const matches = await dbGet(
-          'SELECT * FROM matches WHERE winner = ? OR loser = ? ORDER BY time DESC LIMIT 25', [id, id]
-//Not sure if 25 is a good number
+        const matches = await dbAll(
+          'SELECT * FROM matches WHERE winner = ? OR loser = ? ORDER BY time DESC LIMIT ? OFFSET ?', [id, id, limit, offset]
         );
 
         const matchesWithNick = [];
@@ -628,22 +650,55 @@ fastify.get('/api/users/:id/history', { preHandler: verifyToken }, async (reques
             }
           });
         }
-        reply.status(200).send(matchesWithNick);
+        reply.status(200).send({
+            totalCount: total.count,
+            currentPage: page,
+            limit,
+            totalPages: Math.ceil(total.count / limit),
+            results: matchesWithNick });
 
     } catch (err) {
         reply.status(500).send({ error: 'Failed to fetch match history' });
     }
 });
 
-fastify.get('/api', async () => `This is the ${domain}'s API`);
-
-
-fastify.get('/api/ws', { websocket: true }, (connection, request) => {
-    console.log('WebSocket connection established');
-    connection.socket.on('message', message => {
-        connection.socket.send('Hello from server!');
-    });
+// **13.1 Fetch user pong's wins and losses by ID**
+fastify.get('/api/users/:id/pong', { preHandler: verifyToken }, async (request, reply) => {
+    try {
+        const { id } = request.params;
+        const user = await dbGet('SELECT id, nickname, pong_wins, pong_losses FROM users WHERE id = ?', [id]);
+        if (!user) return reply.status(404).send({ error: 'User not found' });
+        reply.send(user);
+    } catch (err) {
+        reply.status(500).send({ error: 'Failed to fetch users' });
+    }
 });
+
+// **13.2 Update game history**
+
+const VALID_GAMES = ["pong"];
+
+internalFastify.post('/api/updateResult', async (request, reply) => {
+  try {
+    const { winId, lossId, game } = request.body;
+    if (!Number.isInteger(winId) || !Number.isInteger(lossId)) {
+      throw new Error("Invalid user ID");
+    }
+    if (!VALID_GAMES.includes(game)) {
+      throw new Error("Invalid game");
+    }
+    const win = await dbRun(`UPDATE users SET ${game}_wins = ${game}_wins + 1 WHERE id = ?`, [winId]);
+    const loss =  await dbRun(`UPDATE users SET ${game}_losses = ${game}_losses + 1 WHERE id = ?`, [lossId]);
+    const history = await dbRun('INSERT INTO matches (game, winner, loser) VALUES (?, ?, ?)', [game, winId, lossId]);
+    if (!win.changes  || !loss.changes || !history.changes) return reply.status(204).send({ message: 'Some changes are not made' });
+    reply.status(200).send({ message: 'User updated successfully' });
+  } catch (err) {
+    console.error(err);
+    reply.status(500).send({ error: 'Failed to update user' });
+  }
+});
+
+fastify.get('/api', async () => `This is the ${domain}'s API`);
 
 fastify.listen({ host: '0.0.0.0', port: 3443 }, err => {
     if (err) throw err;
