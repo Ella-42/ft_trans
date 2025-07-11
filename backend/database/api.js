@@ -370,15 +370,8 @@ fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply
         }
 
         // Perform the update
-        if (!isEmptyOrNull(name) && !isEmptyOrNull(email) && !isEmptyOrNull(password)) {
-            const hashedPassword = await bcrypt.hash(password, 11);
-            const result = await dbRun('UPDATE users SET nickname = ?, email = ?, password = ? WHERE id = ?', [name, email, hashedPassword, id]);
-            if (!result.changes) return reply.status(204).send({ message: 'No changes made' });
-            reply.status(200).send({ message: 'User updated successfully' });
-            return ;
-        };
 		if (!isEmptyOrNull(name) && !isEmptyOrNull(email) && !isEmptyOrNull(password)) {
-      const hashedPassword = await bcrypt.hash(password, 11);
+			const hashedPassword = await bcrypt.hash(password, 11);
 			const result = await dbRun('UPDATE users SET nickname = ?, password = ? WHERE id = ?', [name, hashedPassword, id]);
 			if (!result.changes) return reply.status(204).send({ message: 'No changes made' });
 			reply.status(200).send({ message: 'User updated successfully, note: new email has to be verified' });
