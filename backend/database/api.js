@@ -59,7 +59,7 @@ const db = new Database('/var/www/db/pong.sqlite', sqlite3.OPEN_READWRITE | sqli
 });
 
 const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
-const passwordRegex = /^(?=.*[A-Za-z\d])[A-Za-z\d@$!%*?&]{3,}$/;
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]{8,}$/;
 //const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/;
 const nicknameRegex = /^[\x20-\x7E\u00A0-\u00FF\u0100-\u017F\u0400-\u04FF\u1F00-\u1FFF]+$/;
 
@@ -340,73 +340,43 @@ function isEmptyOrNull(str) {
     return str === null || str === "" || str === undefined;
 };
 
-// TODO: please rewrite the entire logic
 fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply) => {
-    try {
-        const { id } = request.params;
-        if (parseInt(id) !== request.user.id) {
-            return reply.status(403).send({ error: 'Forbidden: You can only modify your own profile' });
-        }
-        const { name, email, password, oldPassword } = request.body;
-        let updated = 0;
+	try {
+		const { id } = request.params;
+		if (parseInt(id) !== request.user.id)
+			return reply.status(403).send({ error: 'Forbidden: You can only modify your own profile' });
+		const { name, email, password, oldPassword } = request.body;
+		const user = await dbGet('SELECT email, password FROM users WHERE id = ?', [id]);
+		if (!user) return reply.status(404).send({ error: 'User not found' });
+		if (isEmptyOrNull(oldPassword))
+			return reply.status(400).send({ error: 'Old password required' });
+		if (!await bcrypt.compare(oldPassword, user.password))
+			return reply.status(400).send({ error: 'Incorrect old password' });
+		if (isEmptyOrNull(name) && isEmptyOrNull(email) && isEmptyOrNull(password))
+			return reply.status(400).send({ error: 'No fields provided' });
 
-        // Check if user exists before updating
-
-        const existingUser = await dbGet('SELECT email, password FROM users WHERE id = ?', [id]);
-        if (!existingUser) return reply.status(404).send({ error: 'User not found' });
-
-        if (isEmptyOrNull(name) && isEmptyOrNull(email) && isEmptyOrNull(password)) {
-            return reply.status(204).send({ message: 'No changes made' });
-        }
-        if (email && !emailRegex.test(email)) {
-            return reply.status(400).send({ error: 'Invalid email format' });
-        }
-        if (password && !passwordRegex.test(password)) {
-//            return reply.status(400).send({ error: 'Password must be at least 8 characters long and contain letters and numbers' });
-            return reply.status(400).send({ error: 'Password too short' });
-        }
-        if (name && !nicknameRegex.test(name)) {
-            return reply.status(400).send({ error: 'Nickname can only contain printable characters' });
-        }
-        if ((email || password) && isEmptyOrNull(oldPassword)) {
-            return reply.status(400).send({ error: 'Old password is necessary for updating password and email address.' });
-        }
-        if ((email || password) && oldPassword) {
-            const passwordOK = await bcrypt.compare(oldPassword, existingUser.password);
-            if (!passwordOK) {
-                return reply.status(400).send({ error: 'Incorrect old password.' });
-            }
-        }
-
-        // Perform the update
-		if (!isEmptyOrNull(name) && !isEmptyOrNull(email) && !isEmptyOrNull(password)) {
+		if (!isEmptyOrNull(name)) {
+			if (!nicknameRegex.test(name))
+				return reply.status(400).send({ error: 'Nickname can only contain printable characters' });
+			await dbRun('UPDATE users SET nickname = ? WHERE id = ?', [name, id]);
+		}
+		if (!isEmptyOrNull(password)) {
+			if (!passwordRegex.test(password))
+				return reply.status(400).send({ error: 'Password must contain at least 1 uppercase and 1 lowercase letter, 1 digit, 1 special character and be at least 8 characters long' });
 			const hashedPassword = await bcrypt.hash(password, 11);
-			const result = await dbRun('UPDATE users SET nickname = ?, password = ? WHERE id = ?', [name, hashedPassword, id]);
-			if (!result.changes) return reply.status(204).send({ message: 'No changes made' });
-			reply.status(200).send({ message: 'User updated successfully, note: new email has to be verified' });
-			const mailToken = jwt.sign({ oldMail: existingUser.email, newMail: email }, privateKey, { algorithm: 'RS256', expiresIn: '15m' });
+			await dbRun('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, id]);
+		}
+		if (!isEmptyOrNull(email)) {
+			if (!emailRegex.test(email))
+				return reply.status(400).send({ error: 'Invalid email format' });
+			reply.status(200).send({ message: 'User updated successfully, note: New email has to be verified before it can be updated' });
+			const mailToken = jwt.sign({ oldMail: user.email, newMail: email }, privateKey, { algorithm: 'RS256', expiresIn: '15m' });
 			return await mail(email, mailToken, 'update');
 		}
-        if (!isEmptyOrNull(name)) {
-            const newname = await dbRun('UPDATE users SET nickname = ? WHERE id = ?', [name, id]);
-            if (newname.changes) updated = 1;
-        }
-        if (!isEmptyOrNull(email)) updated = 2;
-        if (!isEmptyOrNull(password)) {
-            const hashedPassword = await bcrypt.hash(password, 11);
-            const newpassword = await dbRun('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, id]);
-            if (newpassword.changes) updated = 1;
-        }
-        if (!updated) return reply.status(204).send({ message: 'No changes made' })
-        if (updated === 2) {
-			reply.status(200).send({ message: 'New email has to be verified before it can be updated' });
-			const mailToken = jwt.sign({ oldMail: existingUser.email, newMail: email }, privateKey, { algorithm: 'RS256', expiresIn: '15m' });
-			return await mail(email, mailToken, 'update');
-		}
-        reply.status(200).send({ message: 'User updated successfully' });
-    } catch (err) {
-        reply.status(500).send({ error: 'Failed to update user' });
-    }
+		reply.status(200).send({ message: 'User updated successfully' });
+	} catch (err) {
+		reply.status(500).send({ error: 'Failed to update user' });
+	}
 });
 
 // **5. Get and Update Avatar**
