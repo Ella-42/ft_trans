@@ -1,7 +1,7 @@
 import { renderNavBar } from '../components/NavBar.js';
 import { renderFooter } from '../components/Footer.js';
 import { navigateTo } from '../../router.js';
-import { emailValidation, loginPasswordValidation, invalidLogin } from '../tools/dataValidation.js';
+import { emailValidation, loginPasswordValidation, invalidLogin, emailUnverified } from '../tools/dataValidation.js';
 export const attachLoginFormListener = () => {
     const loginForm = document.querySelector('#loginForm');
     console.log("The attachLoginFormListener runs");
@@ -16,6 +16,7 @@ export const attachLoginFormListener = () => {
             return;
         if (!loginPasswordValidation(password))
             return;
+        console.log("");
         try {
             const response = await axios.post('https://trans.ella-peeters.me/api/login', {
                 email: String(email),
@@ -30,8 +31,13 @@ export const attachLoginFormListener = () => {
             navigateTo('/safe/dashboard');
         }
         catch (error) {
-            console.error("The error is: ", error);
-            invalidLogin();
+            console.error("The error: ", error.response.data);
+            if (error.response.data.error === "Unauthorized: email unverified") {
+                emailUnverified();
+            }
+            else {
+                invalidLogin();
+            }
         }
     });
 };
