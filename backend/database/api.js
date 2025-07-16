@@ -355,17 +355,22 @@ fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply
 		if (isEmptyOrNull(name) && isEmptyOrNull(email) && isEmptyOrNull(password))
 			return reply.status(400).send({ error: 'No fields provided' });
 
+		const fields = [];
+		const params = [];
 		if (!isEmptyOrNull(name)) {
 			if (!nicknameRegex.test(name))
 				return reply.status(400).send({ error: 'Nickname can only contain printable characters' });
-			await dbRun('UPDATE users SET nickname = ? WHERE id = ?', [name, id]);
+			fields.push('nickname = ?');
+			params.push(name);
 		}
 		if (!isEmptyOrNull(password)) {
 			if (!passwordRegex.test(password))
 				return reply.status(400).send({ error: 'Password must contain at least 1 uppercase and 1 lowercase letter, 1 digit, 1 special character and be at least 8 characters long' });
-			const hashedPassword = await bcrypt.hash(password, 11);
-			await dbRun('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, id]);
+			fields.push('password = ?');
+			params.push(await bcrypt.hash(password, 11));
 		}
+		if (fields.length)
+			await dbRun(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, [...params, id]);
 		if (!isEmptyOrNull(email)) {
 			if (!emailRegex.test(email))
 				return reply.status(400).send({ error: 'Invalid email format' });
@@ -391,7 +396,7 @@ fastify.get('/api/users/:id/avatar', async (request, reply) => {
         reply.send({avatar_img: avatar});
         return ;
     } catch (err) {
-        reply.status(500).send({ error: 'Failed to retrieve friends list.' });
+        reply.status(500).send({ error: 'Failed to retrieve avatar' });
     }
 });
 
