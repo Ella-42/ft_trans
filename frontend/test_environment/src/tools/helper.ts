@@ -6,3 +6,16 @@ export const getCookie = (name: string): string | null => {
     return null;
 };
 
+export const togglePassword = () => {
+	const input = document.querySelector('#password') as HTMLInputElement;
+	const inputConfirmation = document.querySelector('#passwordConfirmation') as HTMLInputElement | null;
+
+	const shouldShow =
+		input.type === 'password' || (inputConfirmation && inputConfirmation.type === 'password');
+
+	input.type = shouldShow ? 'text' : 'password';
+
+	if (inputConfirmation) {
+		inputConfirmation.type = shouldShow ? 'text' : 'password';
+	}
+};

@@ -1,13 +1,23 @@
 import { renderNavBar } from '../components/NavBar.js'
 import { renderFooter } from '../components/Footer.js'
 import { navigateTo } from '../../router.js'
+import { togglePassword } from '../tools/helper.js';
 import { emailValidation, loginPasswordValidation, invalidLogin, emailUnverified } from '../tools/dataValidation.js'
 
 declare const axios: any;
 
 export const attachLoginFormListener = () => {
 	const loginForm = document.querySelector('#loginForm');
+	const showPasswordIcon = document.querySelector(".lucide-eye-icon");
 	console.log("The attachLoginFormListener runs");
+
+	if (showPasswordIcon)
+	{
+		showPasswordIcon.addEventListener('click', () => {
+		togglePassword();
+	});
+    }
+
 	loginForm.addEventListener('submit', async (event) => {
 		event.preventDefault();
 		console.log("The login function runs");
@@ -63,8 +73,12 @@ export const renderLogin = (): string => {
 						<label for="email" class="text-base">Email</label>
 						<input class="h-10 rounded text-black" type="email" id="email" name="email">
 						<label for="password" class="text-base">Password</label>
-						<input class="h-10 rounded text-black" type="password" id="password" name="password">
+						<div class="flex items-center gap-2">
+							<input class="h-10 w-11/12 rounded text-black" type="password" id="password" name="password">
+							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye-icon lucide-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+						</div>
 						<button class="h-10 w-full mt-10 text-base md:text-base text-white bg-primary my-2 py-3 px-6 rounded-md justify-center flex items-center whitespace-nowrap hover:text-primary hover:bg-white" type="submit">Login</button>
+
 						<button class="h-10 w-full mt-1 mb-4 text-base md:text-base text-white bg-primary my-6 py-3 px-6 rounded-md justify-center flex items-center whitespace-nowrap hover:text-primary hover:bg-white" type="button" onclick="window.location.href='/auth';">Login with Google</button>
 					</form>
 					<p class="mb-10 text-base" data-link>Don't have an account? Click <a class="underline text-primary pointer" href="/safe/register" data-link>here</a> to register</p>
