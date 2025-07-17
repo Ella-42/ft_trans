@@ -42,6 +42,7 @@
         }
         async function updateUser() {
             const name = document.getElementById('newname').value;
+            const avatar = document.getElementById('newavatar').value;
             const email = document.getElementById('newemail').value;
             const password = document.getElementById('newpassword').value;
             const oldPassword = document.getElementById('oldpassword').value;
@@ -58,7 +59,7 @@
                 method: 'PUT',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password, oldPassword })
+                body: JSON.stringify({ name, email, avatar, password, oldPassword })
             });
 
             loadUsers();
@@ -162,40 +163,14 @@
             loadFriends(id);
         }
 
-        async function updateAvatar() {
-            const avatar_img = document.getElementById('avatar_img').value;
-            const id = document.getElementById('avatarid').value;
-
-            if (!id) {
-                alert("User ID is required to update an avatar!");
-                return;
-            }
-            if (!avatar_img) {
-                alert("Avatar link is required to update an avatar!");
-                return;
-            }
-            const res = await fetch(`/api/users/${id}/avatar`, {
-                method: 'PUT',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ avatar_img })
-            });
-
-            if (!res.ok) {
-              const error = await res.json();
-              alert(`Error updating avatar: ${error.error || "Unknown error"}`);
-              return;
-            }
-        }
-
         async function showAvatar() {
             const id = document.getElementById('avatar').value;
             const res = await fetch(`/api/users/${id}/avatar`);
             const users = await res.json();
-            const avatarImg = users.avatar_img || 'https://42.fr/wp-content/uploads/2021/05/42-Final-sigle-seul.svg'; //temp image, need to be replaced
+            const avatar = users.avatar || 'https://42.fr/wp-content/uploads/2021/05/42-Final-sigle-seul.svg'; //temp image, need to be replaced
             const list = document.getElementById('avatar_block');
             list.innerHTML = 
-                `<img src = "${avatarImg}", width="320">`;
+                `<img src = "${avatar}", width="320">`;
         }
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -459,6 +434,7 @@
     <h2>Update User</h2>
     <input type="text" id="id" placeholder="ID">
     <input type="text" id="newname" placeholder="Name">
+    <input type="text" id="newavatar" placeholder="link to avatar">
     <input type="email" id="newemail" placeholder="Email">
     <input type="password" id="newpassword" placeholder="Password">
     <input type="password" id="oldpassword" placeholder="Old Password">
@@ -482,13 +458,8 @@
     <input type="text" id="toshow" placeholder="User of the list">
     <button type="button" onclick="showFriends()">Show</button>
 
-    
-    <h1>Avatar Management</h1>
-    <ul id="avatar_block"></ul>
-    <input type="text" id="avatarid" placeholder="User ID">
-    <input type="text" id="avatar_img" placeholder="link to avatar">
-    <button type="button" onclick="updateAvatar()">Update</button>
     <h2>Show avatar of</h2>
+    <ul id="avatar_block"></ul>
     <input type="text" id="avatar" placeholder="User ID">
     <button type="button" onclick="showAvatar()">Show</button>
 </body>
