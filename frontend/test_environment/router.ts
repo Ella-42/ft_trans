@@ -14,6 +14,7 @@ import { renderTournament } from './src/components/TournamentComponent.js';
 import { renderStats } from './src/components/StatsComponent.js';
 import { attachDashboardListener } from './src/pages/Dashboard.js';
 import { getCookie } from './src/tools/helper.js';
+import { attachUpdateProfileFormListener } from './src/components/ProfileComponent.js';
 
 declare const axios: any;
 
@@ -61,10 +62,10 @@ export const router = async () => {
 
         		// If dashboard already rendered, just update content
         		if (!document.getElementById("dashboard-content")) {
-          		app.innerHTML = renderDashboard(user); // First full layout render
-          		attachLoggedInMenuListener();
-          		attachDashboardListener();
-          		attachLogoutListener();
+          			app.innerHTML = renderDashboard(user); // First full layout render
+          			attachLoggedInMenuListener();
+          			attachDashboardListener();
+          			attachLogoutListener();
        			}
 			attachSideBarActiveLinkListener();
 
@@ -72,6 +73,10 @@ export const router = async () => {
         		const innerContent = dashboardRoutes[path];
         		if (innerContent) {
           			document.getElementById("dashboard-content").innerHTML = innerContent(user);
+				if (path === "/safe/dashboard/profile")
+				{
+					attachUpdateProfileFormListener();
+				}
         		} else {
           			document.getElementById("dashboard-content").innerHTML = `<p>404 - Page not found in dashboard</p>`;
         		}
