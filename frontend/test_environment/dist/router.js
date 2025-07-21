@@ -13,6 +13,7 @@ import { renderMatchmaking } from './src/components/MatchmakingComponent.js';
 import { renderTournament } from './src/components/TournamentComponent.js';
 import { renderStats } from './src/components/StatsComponent.js';
 import { attachDashboardListener } from './src/pages/Dashboard.js';
+import { attachUpdateProfileFormListener } from './src/components/ProfileComponent.js';
 const routes = {
     "/safe": renderHomePage,
     "/safe/login": renderLogin,
@@ -60,6 +61,9 @@ export const router = async () => {
                 const innerContent = dashboardRoutes[path];
                 if (innerContent) {
                     document.getElementById("dashboard-content").innerHTML = innerContent(user);
+                    if (path === "/safe/dashboard/profile") {
+                        attachUpdateProfileFormListener();
+                    }
                 }
                 else {
                     document.getElementById("dashboard-content").innerHTML = `<p>404 - Page not found in dashboard</p>`;

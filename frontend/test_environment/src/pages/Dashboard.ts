@@ -21,7 +21,7 @@ export const attachDashboardListener = async () => {
 
 export const renderDashboard = (user: User): string => {
 	return `
-	<section class="flex h-screen">
+	<section class="flex min-h-screen">
 		${renderLoggedInSideBar()}
 		<section class="flex flex-col w-full h-full">
 			${renderLoggedInNavBar(user)}
