@@ -19,7 +19,7 @@ export const attachUpdateProfileFormListener = async () => {
 
 	const response = await axios.get('https://trans.ella-peeters.me/api/whoami');
 	const avatarResponse = await axios.get(`https://trans.ella-peeters.me/api/users/${response.data.id}/avatar`);
-	const avatarLink = avatarResponse.data.avatar_img;
+	const avatarLink = avatarResponse.data.avatar;
 	const avatarBlock = document.getElementById('avatarBlock');
 	avatarBlock.innerHTML = `<img src ="${avatarLink}" width="320">`
 
@@ -37,33 +37,33 @@ export const attachUpdateProfileFormListener = async () => {
 		const nameInput = document.querySelector<HTMLInputElement>('#name');
 		const emailInput = document.querySelector<HTMLInputElement>('#email');
 		const avatarInput = document.querySelector<HTMLInputElement>('#avatar_img');
-    		const oldPasswordInput = document.querySelector<HTMLInputElement>('#password');
    		const newPasswordInput = document.querySelector<HTMLInputElement>('#passwordConfirmation');
+		const oldPasswordInput = document.querySelector<HTMLInputElement>('#password');
 
 		const body: Record<string, string> = {};
 		if (nameInput?.value) body.name = nameInput.value;
 		if (emailInput?.value) body.email = emailInput.value;
 		if (avatarInput?.value) body.avatar = avatarInput.value;
-		if (oldPasswordInput?.value) body.oldPassword = oldPasswordInput.value;
 		if (newPasswordInput?.value) body.password = newPasswordInput.value;
+		if (oldPasswordInput?.value) body.oldPassword = oldPasswordInput.value;
 
 		if (Object.keys(body).length === 0)
 		{	
 			Swal.fire(
 			{
 				title: 'Oops!',
-				text: "All the fields are empty!",
+				text: "All fields empty",
 				icon: 'error',
 			})
 			return;
 		}
 
-    		const res = await fetch(`https://trans.ella-peeters.me/api/users/${response.data.id}`, {
-        		method: 'PUT',
-        		credentials: 'include',
-        		headers: { 'Content-Type': 'application/json' },
-        		body: JSON.stringify(body)
-    		});
+		const res = await fetch(`https://trans.ella-peeters.me/api/users/${response.data.id}`, {
+			method: 'PUT',
+			credentials: 'include',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(body)
+		});
 		const jsonResponse = await res.json();
 		provideUserFeedback(jsonResponse);
 	})
@@ -94,17 +94,17 @@ export const renderProfile = () => {
                     							<input class="h-10 rounded px-3 text-black" type="email" id="email" name="email" placeholder="Your new email">
 								</div>
 								<div class="flex flex-col">
-                    							<label for="oldPassword" class="text-base">Old password</label>
+									<label for="newPassword" class="text-base">New password</label>
 									<div class="flex items-center gap-2">
-                    								<input class="h-10 rounded px-3 text-black w-11/12" type="password" id="password" name="oldPassword" placeholder="Old password">
-										<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye-icon lucide-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+									<input class="h-10 rounded px-3 text-black w-11/12" type="password" id="passwordConfirmation" name="passwordConfirmation" placeholder="New password">
+									<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye-icon-new lucide-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
 									</div>
 								</div>
 								<div class="flex flex-col">
-                    							<label for="newPassword" class="text-base">New password</label>
+									<label for="oldPassword" class="text-base">Old password</label>
 									<div class="flex items-center gap-2">
-                    								<input class="h-10 rounded px-3 text-black w-11/12" type="password" id="passwordConfirmation" name="passwordConfirmation" placeholder="New password">
-										<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye-icon-new lucide-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+									<input class="h-10 rounded px-3 text-black w-11/12" type="password" id="password" name="oldPassword" placeholder="Old password">
+									<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye-icon lucide-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
 									</div>
 								</div>
                     
