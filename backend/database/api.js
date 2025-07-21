@@ -3,6 +3,8 @@ import Fastify from 'fastify';
 import jwt from 'jsonwebtoken';
 import fastifyCors from '@fastify/cors';
 import fastifyCookie from '@fastify/cookie';
+import fs from 'fs';
+import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 
 const { Database } = sqlite3;
@@ -10,45 +12,19 @@ const domain = process.env.domain;
 const privateKey = process.env.PRIVATE_KEY.replace(/\\n/g, '\n');
 const publicKey = process.env.PUBLIC_KEY.replace(/\\n/g, '\n');
 
-function createInstance() {
-	return Fastify({
-		logger: true
-	})
+const dbPath = '/var/www/db/pong.sqlite';
+const hmacPath = '/var/www/db/.HMAC.env';
+if (!fs.existsSync(dbPath)) {
+	try {
+		fs.writeFileSync(hmacPath, crypto.randomBytes(32).toString('hex'));
+	} catch(error) {
+		console.error('Failed to generate new HMAC key:', error);
+	}
 }
-
-function registerCors(instance) {
-	return instance.register(fastifyCors, {
-		origin: (origin, cb) => {
-			const allowedOrigins = [`https://${domain}`, 'https://localhost'];
-			if (!origin || allowedOrigins.includes(origin)) {
-				cb(null, true);
-			} else {
-				cb(new Error('Not allowed'), false);
-			}
-		},
-		credentials: true,
-		methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
-	});
-}
-
-function registerCookie(instance) {
-	return instance.register(fastifyCookie, {
-		secret: process.env.COOKIE_SECRET, // for signed cookies
-		parseOptions: {} // options for parsing
-		});
-}
-  
-const fastify = createInstance();
-const internalFastify = createInstance();
-
-await registerCors(fastify);
-await registerCors(internalFastify);
-
-await registerCookie(fastify);
-await registerCookie(internalFastify);
+const hmac = fs.readFileSync(hmacPath, 'utf8');
 
 // Initialize SQLite database
-const db = new Database('/var/www/db/pong.sqlite', sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
+const db = new Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
     if (err) {
         console.error('Database connection error:', err.message);
     }
@@ -58,11 +34,6 @@ const db = new Database('/var/www/db/pong.sqlite', sqlite3.OPEN_READWRITE | sqli
     }
 });
 
-const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
-const passwordRegex = /^(?=.*[A-Za-z\d])[A-Za-z\d@$!%*?&]{3,}$/;
-//const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/;
-const nicknameRegex = /^[\x20-\x7E\u00A0-\u00FF\u0100-\u017F\u0400-\u04FF\u1F00-\u1FFF]+$/;
-
 // Ensure the database exists
 db.serialize(() => {
     db.exec(`
@@ -70,7 +41,6 @@ db.serialize(() => {
 
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            google_id TEXT UNIQUE,
             nickname TEXT NOT NULL UNIQUE,
             password TEXT,
             email TEXT NOT NULL UNIQUE,
@@ -80,7 +50,7 @@ db.serialize(() => {
             pong_wins INT DEFAULT 0,
             pong_losses INT DEFAULT 0,
             pong_tournament_wins INT DEFAULT 0,
-            avatar_img TEXT DEFAULT NULL
+            avatar TEXT DEFAULT NULL
         );
 
         CREATE TABLE IF NOT EXISTS matches (
@@ -119,6 +89,49 @@ const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
         else resolve(rows);
     });
 });
+
+function createInstance() {
+	return Fastify({
+		logger: true
+	})
+}
+
+function registerCors(instance) {
+	return instance.register(fastifyCors, {
+		origin: (origin, cb) => {
+			const allowedOrigins = [`https://${domain}`, 'https://localhost'];
+			if (!origin || allowedOrigins.includes(origin)) {
+				cb(null, true);
+			} else {
+				cb(new Error('Not allowed'), false);
+			}
+		},
+		credentials: true,
+		methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
+	});
+}
+
+function registerCookie(instance) {
+	return instance.register(fastifyCookie, {
+		secret: process.env.COOKIE_SECRET, // for signed cookies
+		parseOptions: {} // options for parsing
+	});
+}
+
+const fastify = createInstance();
+const internalFastify = createInstance();
+
+await registerCors(fastify);
+await registerCors(internalFastify);
+
+await registerCookie(fastify);
+await registerCookie(internalFastify);
+
+// **Regex***
+
+const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]{8,}$/;
+const nicknameRegex = /^[\x20-\x7E\u00A0-\u00FF\u0100-\u017F\u0400-\u04FF\u1F00-\u1FFF]+$/;
 
 // **Mail**
 
@@ -221,7 +234,7 @@ fastify.get('/api/users/verifytoken', { preHandler: verifyToken }, async (reques
 
 fastify.get('/api/verify', { preHandler: decode }, async (request, reply) => {
 	try {
-		await dbRun('UPDATE users SET verified = 1 WHERE email = ?', [request.decoded.email]);
+		await dbRun('UPDATE users SET verified = TRUE WHERE email = ?', [request.decoded.hashedEmail]);
 	} catch {
 		return reply.status(500).send({ error: 'Failed to verify email' });
 	}
@@ -259,44 +272,38 @@ fastify.get('/api/users/:id', async (request, reply) => {
     }
 });
 
-// **2.5 Fetch user email by ID**
-fastify.get('/api/users/:id/email', { preHandler: verifyToken }, async (request, reply) => {
-    try {
-        const { id } = request.params;
-        if (parseInt(id) !== request.user.id) {
-            return reply.status(403).send({ error: 'Forbidden: You can only access private info of your own profile' });
-        }
-        const user = await dbGet('SELECT email FROM users WHERE id = ?', [id]);
-        if (!user) return reply.status(404).send({ error: 'User not found' });
-        reply.send(user);
-    } catch (err) {
-        reply.status(500).send({ error: 'Failed to fetch users' });
-    }
-});
+function isEmptyOrNull(str) {
+    return str === null || str === "" || str === undefined;
+};
+
+const hash = async variable => {
+	return await bcrypt.hash(variable, 11);
+}
+
+const hmacHash = variable => {
+	return crypto.createHmac('sha256', hmac).update(variable).digest('hex');
+}
 
 // **3. Add new user**
 fastify.post('/api/register', async (request, reply) => {
     try {
         const { name, email, password } = request.body;
-        if (!password) return reply.status(400).send({ error: 'Password is required' });
-        if (!email) return reply.status(400).send({ error: 'Email is required' });
-        if (!name) return reply.status(400).send({ error: 'Nickname is required' });
-	    console.log("The email is: ", email);
+        if (isEmptyOrNull(email)) return reply.status(400).send({ error: 'Email is required' });
+        if (isEmptyOrNull(password)) return reply.status(400).send({ error: 'Password is required' });
+        if (isEmptyOrNull(name)) return reply.status(400).send({ error: 'Nickname is required' });
         if (!emailRegex.test(email)) {
             return reply.status(400).send({ error: 'Invalid email format' });
         }
         if (!passwordRegex.test(password)) {
-//            return reply.status(400).send({ error: 'Password must be at least 8 characters long and contain letters and numbers' });
-            return reply.status(400).send({ error: 'Password too short' });
+			return reply.status(400).send({ error: 'Password must contain at least 1 uppercase and 1 lowercase letter, 1 digit, 1 special character and be at least 8 characters long' });
         }
         if (!nicknameRegex.test(name)) {
             return reply.status(400).send({ error: 'Nickname can only contain printable characters' });
         }
-        const hashedPassword = await bcrypt.hash(password, 11);
-		//console.log("The password after hashing is: ", hashedPassword);
-        const result = await dbRun('INSERT INTO users (nickname, email, password) VALUES (?, ?, ?)', [name, email, hashedPassword]);
-        reply.status(201).send({ id: result.lastID, name, email });
-		const mailToken = jwt.sign({ email }, privateKey, { algorithm: 'RS256', expiresIn: '15m' });
+		const hashedEmail = hmacHash(email);
+        const result = await dbRun('INSERT INTO users (nickname, email, password) VALUES (?, ?, ?)', [name, hashedEmail, await hash(password)]);
+        reply.status(201).send({ id: result.lastID, name });
+		const mailToken = jwt.sign({ hashedEmail }, privateKey, { algorithm: 'RS256', expiresIn: '15m' });
 		await mail(email, mailToken, 'verify');
     } catch (err) {
         if (err.code === 'SQLITE_CONSTRAINT') {
@@ -306,147 +313,99 @@ fastify.post('/api/register', async (request, reply) => {
     }
 });
 
-// **3.5 Add new Google user**
+// **3.5 Add new Google user or log in**
 internalFastify.post('/api/google_register', async (request, reply) => {
 	let result;
-	const { id, name, email, picture } = request.body;
+	const { name, email, picture } = request.body;
+	const hashedEmail = hmacHash(email);
     try {
-		result = await dbRun('INSERT INTO users (google_id, nickname, email, verified, avatar_img) VALUES (?, ?, ?, TRUE, ?)', [id, name, email, picture]);
+		result = await dbRun('INSERT INTO users (nickname, email, verified, avatar) VALUES (?, ?, TRUE, ?)', [name, hashedEmail, picture]);
 	} catch (err) {
 		if (err.code === 'SQLITE_CONSTRAINT') {
 			if (err.message.includes('users.nickname')) {
 				const row = await dbGet('SELECT id FROM users ORDER BY id DESC LIMIT 1');
 				try {
-					result = await dbRun('INSERT INTO users (google_id, nickname, email, verified, avatar_img) VALUES (?, ?, ?, TRUE, ?)', [id, 'user' + (row.id + 1), email, picture]);
+					result = await dbRun('INSERT INTO users (nickname, email, verified, avatar) VALUES (?, ?, TRUE, ?)', ['user' + (row.id + 1), hashedEmail, picture]);
 				} catch (err) {
 					return reply.status(500).send({ error: 'Try signing in with another account registered to a different name' });
 				}
 			}
-			else return reply.status(409).send({ error: 'Email already in use' });
+			result = await dbGet('SELECT id FROM users WHERE email = ?', [hashedEmail]);
+			result.lastID = result.id; //make user log in instead
 		}
 		else return reply.status(500).send({ error: 'Failed to add user' });
 	}
 	try {
 		jwtSend(result.lastID, reply);
 	} catch (err) {
-		console.error(err);
 		reply.status(500).send({ error: 'Failed to set cookie' });
 	}
 });
 
 // **4. Update user**
-
-function isEmptyOrNull(str) {
-    return str === null || str === "" || str === undefined;
-};
-
-// TODO: please rewrite the entire logic
 fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply) => {
-    try {
-        const { id } = request.params;
-        if (parseInt(id) !== request.user.id) {
-            return reply.status(403).send({ error: 'Forbidden: You can only modify your own profile' });
-        }
-        const { name, email, password, oldPassword } = request.body;
-        let updated = 0;
+	try {
+		const { id } = request.params;
+		if (parseInt(id) !== request.user.id)
+			return reply.status(403).send({ error: 'Forbidden: You can only modify your own profile' });
+		const { name, avatar, email, password, oldPassword } = request.body;
+		const user = await dbGet('SELECT email, password FROM users WHERE id = ?', [id]);
+		if (!user) return reply.status(404).send({ error: 'User not found' });
+		if (user.password) {
+			if (isEmptyOrNull(oldPassword))
+				return reply.status(400).send({ error: 'Old password required' });
+			if (!await bcrypt.compare(oldPassword, user.password))
+				return reply.status(400).send({ error: 'Incorrect old password' });
+		}
+		if (isEmptyOrNull(name) && isEmptyOrNull(avatar) && isEmptyOrNull(email) && isEmptyOrNull(password))
+			return reply.status(400).send({ error: 'No fields provided' });
 
-        // Check if user exists before updating
-
-        const existingUser = await dbGet('SELECT email, password FROM users WHERE id = ?', [id]);
-        if (!existingUser) return reply.status(404).send({ error: 'User not found' });
-
-        if (isEmptyOrNull(name) && isEmptyOrNull(email) && isEmptyOrNull(password)) {
-            return reply.status(204).send({ message: 'No changes made' });
+		const fields = [];
+		const params = [];
+		if (!isEmptyOrNull(name)) {
+			if (!nicknameRegex.test(name))
+				return reply.status(400).send({ error: 'Nickname can only contain printable characters' });
+			fields.push('nickname = ?');
+			params.push(name);
+		}
+        if (!isEmptyOrNull(avatar)) {
+			fields.push('avatar = ?');
+			params.push(avatar);
         }
-        if (email && !emailRegex.test(email)) {
-            return reply.status(400).send({ error: 'Invalid email format' });
-        }
-        if (password && !passwordRegex.test(password)) {
-//            return reply.status(400).send({ error: 'Password must be at least 8 characters long and contain letters and numbers' });
-            return reply.status(400).send({ error: 'Password too short' });
-        }
-        if (name && !nicknameRegex.test(name)) {
-            return reply.status(400).send({ error: 'Nickname can only contain printable characters' });
-        }
-        if ((email || password) && isEmptyOrNull(oldPassword)) {
-            return reply.status(400).send({ error: 'Old password is necessary for updating password and email address.' });
-        }
-        if ((email || password) && oldPassword) {
-            const passwordOK = await bcrypt.compare(oldPassword, existingUser.password);
-            if (!passwordOK) {
-                return reply.status(400).send({ error: 'Incorrect old password.' });
-            }
-        }
-
-        // Perform the update
-		if (!isEmptyOrNull(name) && !isEmptyOrNull(email) && !isEmptyOrNull(password)) {
-			const hashedPassword = await bcrypt.hash(password, 11);
-			const result = await dbRun('UPDATE users SET nickname = ?, password = ? WHERE id = ?', [name, hashedPassword, id]);
-			if (!result.changes) return reply.status(204).send({ message: 'No changes made' });
-			reply.status(200).send({ message: 'User updated successfully, note: new email has to be verified' });
-			const mailToken = jwt.sign({ oldMail: existingUser.email, newMail: email }, privateKey, { algorithm: 'RS256', expiresIn: '15m' });
+		if (!isEmptyOrNull(password)) {
+			if (!passwordRegex.test(password))
+				return reply.status(400).send({ error: 'Password must contain at least 1 uppercase and 1 lowercase letter, 1 digit, 1 special character and be at least 8 characters long' });
+			fields.push('password = ?');
+			params.push(await bcrypt.hash(password, 11));
+		}
+		if (fields.length)
+			await dbRun(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, [...params, id]);
+		if (!isEmptyOrNull(email)) {
+			if (!emailRegex.test(email))
+				return reply.status(400).send({ error: 'Invalid email format' });
+			reply.status(200).send({ message: 'User updated successfully, note: New email has to be verified before it can be updated' });
+			const mailToken = jwt.sign({ oldMail: user.email, newMail: hmacHash(email) }, privateKey, { algorithm: 'RS256', expiresIn: '15m' });
 			return await mail(email, mailToken, 'update');
 		}
-        if (!isEmptyOrNull(name)) {
-            const newname = await dbRun('UPDATE users SET nickname = ? WHERE id = ?', [name, id]);
-            if (newname.changes) updated = 1;
-        }
-        if (!isEmptyOrNull(email)) updated = 2;
-        if (!isEmptyOrNull(password)) {
-            const hashedPassword = await bcrypt.hash(password, 11);
-            const newpassword = await dbRun('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, id]);
-            if (newpassword.changes) updated = 1;
-        }
-        if (!updated) return reply.status(204).send({ message: 'No changes made' })
-        if (updated === 2) {
-			reply.status(200).send({ message: 'New email has to be verified before it can be updated' });
-			const mailToken = jwt.sign({ oldMail: existingUser.email, newMail: email }, privateKey, { algorithm: 'RS256', expiresIn: '15m' });
-			return await mail(email, mailToken, 'update');
-		}
-        reply.status(200).send({ message: 'User updated successfully' });
-    } catch (err) {
-        reply.status(500).send({ error: 'Failed to update user' });
-    }
+		reply.status(200).send({ message: 'User updated successfully' });
+	} catch {
+		reply.status(500).send({ error: 'Failed to update user' });
+	}
 });
 
-// **5. Get and Update Avatar**
+// **5. Get Avatar**
 fastify.get('/api/users/:id/avatar', async (request, reply) => {
     try {
         const { id } = request.params;
-        const row = await dbGet("SELECT avatar_img FROM users WHERE id = ?", [id]);
+        const row = await dbGet("SELECT avatar FROM users WHERE id = ?", [id]);
         if (!row) {
             return reply.status(404).send({ error: "User not found" });
         }
-        const avatar = row.avatar_img ? row.avatar_img : "https://42.fr/wp-content/uploads/2021/05/42-Final-sigle-seul.svg";
-        reply.send({avatar_img: avatar});
+        const avatar = row.avatar ? row.avatar : "https://42.fr/wp-content/uploads/2021/05/42-Final-sigle-seul.svg";
+        reply.send({avatar: avatar});
         return ;
     } catch (err) {
-        reply.status(500).send({ error: 'Failed to retrieve friends list.' });
-    }
-});
-
-fastify.put('/api/users/:id/avatar', { preHandler: verifyToken }, async (request, reply) => {
-    try {
-        const { id } = request.params;
-        if (parseInt(id) !== request.user.id) {
-            return reply.status(403).send({ error: 'Forbidden: You can only modify your own profile' });
-        }
-        const { avatar_img } = request.body;
-
-        // Check if user exists before updating
-        const existingUser = await dbGet('SELECT id FROM users WHERE id = ?', [id]);
-        if (!existingUser) return reply.status(404).send({ error: 'User not found' });
-
-        if (isEmptyOrNull(avatar_img)) {
-            return reply.status(204).send({ message: 'No changes made' });
-        };
-        // Perform the update
-        const result = await dbRun('UPDATE users SET avatar_img = ? WHERE id = ?', [avatar_img, id]);
-        if (!result.changes) return reply.status(204).send({ message: 'No changes made' });
-        reply.status(200).send({ message: 'Avatar updated successfully' });
-        return ;
-    } catch (err) {
-        reply.status(500).send({ error: 'Failed to update Avatar' });
+        reply.status(500).send({ error: 'Failed to retrieve avatar' });
     }
 });
 
@@ -471,15 +430,14 @@ fastify.delete('/api/users/:id', { preHandler: verifyToken }, async (request, re
 fastify.post('/api/login', async (request, reply) => {
     const { email, password } = request.body;
     try {
-        const user = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
+        const user = await dbGet('SELECT id, email, password, verified FROM users WHERE email = ?', [hmacHash(email)]);
         if (!user) {
-            return reply.status(401).send({ error: 'Invalid email or password' });
+            return reply.status(401).send({ error: 'Invalid email' });
         }
-        const passwordOK = await bcrypt.compare(password, user.password);
-        if (!passwordOK) {
-            return reply.status(401).send({ error: 'Invalid email or password' });
+        if (!await bcrypt.compare(password, user.password)) {
+            return reply.status(401).send({ error: 'Invalid password' });
         }
-		if (!user.verified) return reply.status(401).send({ error: 'Unauthorized: email unverified' });
+		if (!user.verified) return reply.status(401).send({ error: 'Unverified email' });
 		jwtSend(user.id, reply);
     } catch (err) {
         reply.status(500).send({ error: 'An error occurred while logging in' });
@@ -592,7 +550,7 @@ fastify.get('/api/whoami', { preHandler: checkLoginInStatus }, async (request, r
 fastify.post('/api/logout', async (request, reply) => {
     reply.clearCookie('token', {
         path: '/'
-    }).send({ success: true });
+    }).send({ ok: true });
 });
 
 
