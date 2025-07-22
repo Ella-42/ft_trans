@@ -34,9 +34,6 @@ export const attachRegisterFormListener = () => {
 		const passwordConfirmation = formData.get('passwordConfirmation') as string;
 		const nickName = formData.get('nickName') as string;
 
-		console.log("The email is: ", email);
-		console.log("The password is: ", password);
-
 		if (!emailValidation(email)) return;
 		if (!registerPasswordValidation(password, passwordConfirmation)) return;
 		if (!usernameValidation(nickName)) return;
@@ -82,7 +79,7 @@ export const renderRegister = (): string => {
 						</div>
 						<label for="passwordConfirmation" class="text-base">Password confirmation</label>
 						<div class="flex items-center gap-2">
-							<input class="h-10 w-11/12 rounded text-black" type="password" id="passwordConfirmation" name="password">
+							<input class="h-10 w-11/12 rounded text-black" type="password" id="passwordConfirmation" name="passwordConfirmation">
 							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye-icon-confirmation lucide-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
 						</div>
 						<button class="h-10 w-full mt-10 text-base md:text-base text-white bg-primary my-8 py-3 px-6 rounded-md justify-center flex items-center whitespace-nowrap hover:text-primary hover:bg-white" type="submit">Register</button>

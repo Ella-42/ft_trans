@@ -34,4 +34,6 @@ app.post('/verify', sendVerification('verify', 'activated'));
 
 app.post('/update', sendVerification('update', 'updated'));
 
+app.post('/2fa', sendVerification('2fa', 'validated'));
+
 app.listen({ host: '0.0.0.0', port: 2626 });

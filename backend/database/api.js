@@ -45,6 +45,7 @@ db.serialize(() => {
             password TEXT,
             email TEXT NOT NULL UNIQUE,
             verified INT DEFAULT FALSE,
+            two_factor INT DEFAULT FALSE,
             friends TEXT DEFAULT '[]',
             blocked TEXT DEFAULT '[]',
             pong_wins INT DEFAULT 0,
@@ -148,7 +149,7 @@ const mail = async (to, token, endpoint) => {
 }
 
 const autoClose = (wording, reply) => {
-	reply.type('text/html').send(`<h2 align="center">Email ${wording} successfully!</h2><script>setTimeout(() => window.close(), 3000);</script>`);
+	reply.type('text/html').send(`<h2 align="center">${wording} successfully!</h2><script>setTimeout(() => window.close(), 3000);</script>`);
 }
 
 // **Token handlers**
@@ -225,7 +226,7 @@ fastify.get('/api/users/verifytoken', { preHandler: verifyToken }, async (reques
     try { 
         const user = await dbGet('SELECT id, nickname FROM users WHERE id = ?', [request.user.id]);
         if (!user) return reply.status(401).send({ error: 'Unauthorized: User not found' });
-        reply.status(200).send({ message: 'OK', id: user.id, nickname: user.nickname });
+        reply.status(200).send({ message: 'OK', id: user.id, nickname: user.nickname, avatar: user.avatar });
         return ;
     } catch (err) {
         reply.status(500).send({ error: 'Failed to verify' });
@@ -238,7 +239,7 @@ fastify.get('/api/verify', { preHandler: decode }, async (request, reply) => {
 	} catch {
 		return reply.status(500).send({ error: 'Failed to verify email' });
 	}
-	autoClose('verified', reply);
+	autoClose('Email verified', reply);
 });
 
 fastify.get('/api/update', { preHandler: decode }, async (request, reply) => {
@@ -247,7 +248,7 @@ fastify.get('/api/update', { preHandler: decode }, async (request, reply) => {
 	} catch {
 		return reply.status(500).send({ error: 'Failed to update email' });
 	}
-	autoClose('updated', reply);
+	autoClose('Email updated', reply);
 });
 
 // **1. Fetch all users**
@@ -426,26 +427,73 @@ fastify.delete('/api/users/:id', { preHandler: verifyToken }, async (request, re
     }
 });
 
-// **7.  login user**
+// **7. Login user**
 fastify.post('/api/login', async (request, reply) => {
     const { email, password } = request.body;
     try {
-        const user = await dbGet('SELECT id, email, password, verified FROM users WHERE email = ?', [hmacHash(email)]);
+        const user = await dbGet('SELECT id, email, password, verified, two_factor FROM users WHERE email = ?', [hmacHash(email)]);
         if (!user) {
             return reply.status(401).send({ error: 'Invalid email' });
         }
         if (!await bcrypt.compare(password, user.password)) {
             return reply.status(401).send({ error: 'Invalid password' });
         }
-		if (!user.verified) return reply.status(401).send({ error: 'Unverified email' });
+		if (!user.verified) {
+			return reply.status(401).send({ error: 'Unverified email' });
+		}
+		if (user.two_factor) {
+			reply.status(200).send({ message: '2FA enabled, check inbox' });
+			const mailToken = jwt.sign({ id: user.id }, privateKey, { algorithm: 'RS256', expiresIn: '15m' });
+			return await mail(email, mailToken, '2fa');
+		}
 		jwtSend(user.id, reply);
     } catch (err) {
         reply.status(500).send({ error: 'An error occurred while logging in' });
     }
 });
 
-// **8. add friend **
+// **7.1 Two-Factor Authentication**
 
+fastify.get('/api/2fa', { preHandler: decode }, async (request, reply) => {
+	const token = jwt.sign({ id: request.decoded.id }, privateKey, { algorithm: 'RS256', expiresIn: '12h' });
+	reply.setCookie('token', token, {
+		signed: true,
+		httpOnly: true,
+		secure: true,
+		sameSite: 'Strict',
+		path: '/',
+		maxAge: 60 * 60 * 12 // 12 hours
+	});
+	autoClose('Login validated', reply);
+});
+
+fastify.post('/api/users/:id/2fa', { preHandler: verifyToken }, async (request, reply) => {
+    try {
+        const { id } = request.params;
+        if (parseInt(id) !== request.user.id) {
+            return reply.status(403).send({ error: 'Forbidden: You can only toggle 2FA on your own profile' });
+        }
+        await dbRun('UPDATE users SET two_factor = NOT two_factor WHERE id = ?', [id]);
+        reply.status(200).send({ message: '2FA toggled successfully' });
+    } catch {
+        reply.status(500).send({ error: 'Failed to toggle 2FA' });
+    }
+});
+
+fastify.get('/api/users/:id/2fa', { preHandler: verifyToken }, async (request, reply) => {
+    try {
+        const { id } = request.params;
+        if (parseInt(id) !== request.user.id) {
+            return reply.status(403).send({ error: 'Forbidden: You can only see whether 2FA is enabled/disabled on your own profile' });
+        }
+		const result = await dbGet('SELECT two_factor FROM users WHERE id = ?', [id]);
+        reply.status(200).send({ two_factor: result.two_factor });
+    } catch {
+        reply.status(500).send({ error: 'Failed to get value for 2FA' });
+    }
+});
+
+// **8. add friend **
 fastify.put('/api/users/:id/friends', { preHandler: verifyToken }, async (request, reply) => {
     try {
         const { id } = request.params;
@@ -485,7 +533,6 @@ fastify.put('/api/users/:id/friends', { preHandler: verifyToken }, async (reques
 });
 
 // **9. get friends list **
-
 fastify.get('/api/users/:id/friends', async (request, reply) => {
     try {
         const { id } = request.params;
