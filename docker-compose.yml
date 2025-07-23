@@ -112,7 +112,7 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: ./data/sqlite
+      device: /srv/transcendence/data
 
 # Networks for frontend and backend
 networks:
@@ -123,4 +123,3 @@ networks:
   mailserver-database:
   ws-database:
   ws-nginx:
-  
