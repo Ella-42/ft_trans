@@ -47,7 +47,7 @@ function generateDkimHeader(headers, body)
 		'a=rsa-sha256',
 		'c=relaxed/simple',
 		`d=${domain}`,
-		`s=default`,
+		`s=dkim`,
 		`h=${dkimHeaders.join(':')}`,
 		`bh=${bodyHash}`,
 		'b='
