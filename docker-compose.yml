@@ -7,7 +7,7 @@ services:
     container_name: nginx
     build: ./backend/webserver
     restart: on-failure:3
-    env_file: .env #IP whitelist
+    env_file: /srv/transcendence/env/.ip.env #IP whitelist
     environment:
       - domain=trans.ella-peeters.me
     networks:
@@ -33,7 +33,7 @@ services:
       context: .
       dockerfile: backend/database/Dockerfile
     restart: on-failure:3
-    env_file: .env.backend
+    env_file: /srv/transcendence/env/.backend.env
     environment:
       - domain=trans.ella-peeters.me
     depends_on:
@@ -54,7 +54,7 @@ services:
       context: .
       dockerfile: backend/websocket/Dockerfile
     restart: on-failure:3
-    env_file: .env.backend
+    env_file: /srv/transcendence/env/.backend.env
     environment:
       - domain=trans.ella-peeters.me
     depends_on:
@@ -70,7 +70,7 @@ services:
     container_name: authenticator
     build: ./backend/authenticator
     restart: on-failure:3
-    env_file: .google_credentials.env
+    env_file: /srv/transcendence/env/.google.env
     environment:
       - domain=trans.ella-peeters.me
     depends_on:
@@ -87,7 +87,7 @@ services:
     container_name: mailserver
     build: ./backend/mailserver
     restart: on-failure:3
-    env_file: .smtp_credentials.env
+    env_file: /srv/transcendence/env/.smtp.env
     environment:
       - domain=ella-peeters.me
       - subDomain=trans.ella-peeters.me
@@ -121,5 +121,5 @@ networks:
   authenticator-database:
   mailserver-nginx:
   mailserver-database:
-  ws-database:
   ws-nginx:
+  ws-database:
