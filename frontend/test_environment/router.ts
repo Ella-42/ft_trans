@@ -8,13 +8,12 @@ import { attachRegisterFormListener } from './src/pages/Register.js';
 import { attachLoginFormListener } from './src/pages/Login.js';
 import { renderDashboardComponent } from './src/components/DashboardComponent.js';
 import { renderDashboard } from './src/pages/Dashboard.js';
-import { renderProfile } from './src/components/ProfileComponent.js';
-import { renderMatchmaking } from './src/components/MatchmakingComponent.js';
+import { renderProfile, attachUpdateProfileFormListener } from './src/components/ProfileComponent.js';
+import { renderMatchmaking, attachMatchmakingPong } from './src/components/MatchmakingComponent.js';
 import { renderTournament } from './src/components/TournamentComponent.js';
 import { renderStats } from './src/components/StatsComponent.js';
 import { attachDashboardListener } from './src/pages/Dashboard.js';
 import { getCookie } from './src/tools/helper.js';
-import { attachUpdateProfileFormListener } from './src/components/ProfileComponent.js';
 
 declare const axios: any;
 
@@ -76,6 +75,10 @@ export const router = async () => {
 				if (path === "/safe/dashboard/profile")
 				{
 					attachUpdateProfileFormListener();
+				}
+				else if (path === "/safe/dashboard/matchmaking")
+				{
+					attachMatchmakingPong();
 				}
         		} else {
           			document.getElementById("dashboard-content").innerHTML = `<p>404 - Page not found in dashboard</p>`;

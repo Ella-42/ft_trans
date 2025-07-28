@@ -8,12 +8,11 @@ import { attachRegisterFormListener } from './src/pages/Register.js';
 import { attachLoginFormListener } from './src/pages/Login.js';
 import { renderDashboardComponent } from './src/components/DashboardComponent.js';
 import { renderDashboard } from './src/pages/Dashboard.js';
-import { renderProfile } from './src/components/ProfileComponent.js';
-import { renderMatchmaking } from './src/components/MatchmakingComponent.js';
+import { renderProfile, attachUpdateProfileFormListener } from './src/components/ProfileComponent.js';
+import { renderMatchmaking, attachMatchmakingPong } from './src/components/MatchmakingComponent.js';
 import { renderTournament } from './src/components/TournamentComponent.js';
 import { renderStats } from './src/components/StatsComponent.js';
 import { attachDashboardListener } from './src/pages/Dashboard.js';
-import { attachUpdateProfileFormListener } from './src/components/ProfileComponent.js';
 const routes = {
     "/safe": renderHomePage,
     "/safe/login": renderLogin,
@@ -63,6 +62,9 @@ export const router = async () => {
                     document.getElementById("dashboard-content").innerHTML = innerContent(user);
                     if (path === "/safe/dashboard/profile") {
                         attachUpdateProfileFormListener();
+                    }
+                    else if (path === "/safe/dashboard/matchmaking") {
+                        attachMatchmakingPong();
                     }
                 }
                 else {
