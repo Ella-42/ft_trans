@@ -8,6 +8,7 @@ function check_ip(r)
 		process.env.SCHOOL_WIFI,
 		process.env.ELLA,
 		process.env.PCLAUS,
+		process.env.PCLAUSMOBILE,
 		process.env.KCHEUNG,
 	]
 

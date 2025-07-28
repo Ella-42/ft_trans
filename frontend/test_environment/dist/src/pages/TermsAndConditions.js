@@ -9,6 +9,7 @@ export function renderTermsAndConditions() {
 
 				<section class="space-y-6 text-white">
           				<div>
+						<p>Last updated: July 25, 2025</p>
         					<h2 class="text-2xl font-semibold mb-2">1. Definitions</h2>
             					<p class="pl-3"><strong>Platform/website:</strong> Refers to the web application Retropong.</p>
             					<p class="pl-3"><strong>User:</strong> Any individual who registers and/or uses the services of Retropong.</p>
@@ -29,12 +30,12 @@ export function renderTermsAndConditions() {
             					<h2 class="text-2xl font-semibold mb-2">3. User Accounts</h2>
             					<h3 class="text-lg font-medium">3.1 Account Registration</h3>
             					<p class="pl-3">To use the multiplayer features of Retropong, you must register and create an account. You agree to provide accurate, current, and complete information during the registration process. The information we collect is:</p>
-            					<ul class="list-disc ml-6 mt-1">
+            					<ul class="list-disc ml-6 mt-3 mb-3">
               						<li>Username</li>
-              						<li>Email</li>
-              						<li>Password</li>
+              						<li>Email (hashed)</li>
+              						<li>Password (hashed)</li>
             					</ul>
-            					<p class="pl-3">The username, email address and password can be changed once the user is logged in.</p>
+						<p class="pl-3">Username and password are hashed before being saved. This means that we do not keep your password and email as plain text data. The username, email address and password can be changed once the user is logged in.</p>
 
             					<h3 class="text-lg font-medium mt-3">3.2 Account Security</h3>
             					<p class="pl-3">You are responsible for maintaining the confidentiality of your account credentials. Notify us immediately if you suspect unauthorized access to your account.</p>
@@ -49,13 +50,13 @@ export function renderTermsAndConditions() {
             					<p class="pl-3">Users may not impersonate others or provide false information. We reserve the right to suspend or terminate accounts that violate this rule.</p>
 
             					<h3 class="text-lg font-medium mt-3">3.6 Privacy</h3>
-            					<p class="pl-3">All personal information is handled according to our <a href="/privacy" class="text-primary underline">Privacy Policy</a>.</p>
+            					<p class="pl-3">All personal information is handled according to our <a href="https://trans.ella-peeters.me/safe/privacy-policy" class="text-primary underline">Privacy Policy</a>.</p>
 
             					<h3 class="text-lg font-medium mt-3">3.7 Access</h3>
             					<p class="pl-3">After successful registration, you gain access to platform features such as matchmaking, gameplay, stats, and leaderboards.</p>
 
             					<h3 class="text-lg font-medium mt-3">3.8 Consent</h3>
-            					<p class="pl-3">By registering, you agree to be bound by these Terms of Service, our Privacy Policy, and all applicable platform rules.</p>
+            					<p class="pl-3">By registering, you agree to be bound by these Terms of Service, our <a href="https://trans.ella-peeters.me/safe/privacy-policy" class="text-primary underline">Privacy Policy</a>, and all applicable platform rules.</p>
           				</div>
 
           				<div>
@@ -73,48 +74,32 @@ export function renderTermsAndConditions() {
           				</div>
 
           				<div>
-            					<h2 class="text-2xl font-semibold mb-2">5. Intellectual Property</h2>
-            					<h3 class="text-lg font-medium mt-3">5.1 Ownership</h3>
-	    					<p class="pl-3">All content and assets on the platform are the property of Retropong.</p>
-            					<h3 class="text-lg font-medium mt-3">5.2 User License</h3>
-		    				<p class="pl-3">You may use the platform for personal, non-commercial use only.</p>
-            					<h3 class="text-lg font-medium mt-3">5.3 Prohibited Use</h3>
-		    				<p class="pl-3">Do not copy or distribute platform content without permission.</p>
-            					<h3 class="text-lg font-medium mt-3">5.4 User Submissions</h3>
-		    				<p class="pl-3">Feedback or reviews may be reused by Retropong under a royalty-free license.</p>
-            					<h3 class="text-lg font-medium mt-3">5.5 Copyright Complaints</h3>
-		    				<p class="pl-3">Contact <a href="mailto:info@ella-peeters.com" class="text-primary underline">info@ella-peeters.com</a> for IP concerns.</p>
-            					<h3 class="text-lg font-medium mt-3">5.6 Platform Changes</h3>
-		    				<p class="pl-3">We may update, remove, or modify features at any time.</p>
-          				</div>
-
-          				<div>
-            					<h2 class="text-2xl font-semibold mb-2">6. Conduct and Community Rules</h2>
-            					<h3 class="text-lg font-medium mt-3">6.1 Fair Play</h3>
+            					<h2 class="text-2xl font-semibold mb-2">5. Conduct and Community Rules</h2>
+            					<h3 class="text-lg font-medium mt-3">5.1 Fair Play</h3>
 		    				<p class="pl-3">Bots, cheats, and exploits are prohibited.</p>
-            					<h3 class="text-lg font-medium mt-3">6.2 Respectful Behavior</h3>
+            					<h3 class="text-lg font-medium mt-3">5.2 Respectful Behavior</h3>
 		    				<p class="pl-3">Offensive or harassing behavior may result in bans.</p>
-            					<h3 class="text-lg font-medium mt-3">6.3 Reporting Misconduct</h3>
-		    				<p class="pl-3">Report violations to <a href="mailto:info@ella-peeters.com" class="text-primary underline">info@ella-peeters.com</a>.</p>
+            					<h3 class="text-lg font-medium mt-3">5.3 Reporting Misconduct</h3>
+		    				<p class="pl-3">Report violations to <a href="mailto:EllaP.jobs@gmail.com" class="text-primary underline">info@ella-peeters.com</a>.</p>
           				</div>
 
           				<div>
-            					<h2 class="text-2xl font-semibold mb-2">7. Account Termination</h2>
-            					<h3 class="text-lg font-medium mt-3">7.1 Voluntary Termination</h3>
+            					<h2 class="text-2xl font-semibold mb-2">6. Account Termination</h2>
+            					<h3 class="text-lg font-medium mt-3">6.1 Voluntary Termination</h3>
 		    				<p class="pl-3">You may delete your account permanently from your profile.</p>
-            					<h3 class="text-lg font-medium mt-3">7.2 Suspension</h3>
+            					<h3 class="text-lg font-medium mt-3">6.2 Suspension</h3>
 		    				<p class="pl-3">We may suspend accounts that break the rules.</p>
-            					<h3 class="text-lg font-medium mt-3">7.3 No Data Recovery</h3>
+            					<h3 class="text-lg font-medium mt-3">6.3 No Data Recovery</h3>
 		    				<p class="pl-3">Deleted accounts cannot be recovered.</p>
-            					<h3 class="text-lg font-medium mt-3">7.4 Inactive Accounts</h3>
+            					<h3 class="text-lg font-medium mt-3">6.4 Inactive Accounts</h3>
 		    				<p class="pl-3">We may remove accounts inactive for over 12 months.</p>
-            					<h3 class="text-lg font-medium mt-3">7.5 Retention</h3>
+            					<h3 class="text-lg font-medium mt-3">6.5 Retention</h3>
 		    				<p class="pl-3">Some data may be retained for legal compliance.</p>
           				</div>
 
           				<div>
             					<h2 class="text-2xl font-semibold mb-2">8. Privacy and Cookies</h2>
-            					<p class="pl-3">For data and cookie usage, please see our <a href="/privacy" class="text-primary underline">Privacy Policy</a> and <a href="/cookies" class="text-primary underline">Cookie Policy</a>.</p>
+            					<p class="pl-3">For data and cookie usage, please see our <a href="https://trans.ella-peeters.me/safe/privacy-policy" class="text-primary underline">Privacy Policy</a> and <a href="https://trans.ella-peeters.me/safe/cookie-policy" class="text-primary underline">Cookie Policy</a>.</p>
           				</div>
         			</section>
       			</main>

@@ -2,15 +2,14 @@ import { renderNavBar } from '../components/NavBar.js'
 import { renderFooter } from '../components/Footer.js'
 import { navigateTo } from '../../router.js'
 import { togglePassword } from '../tools/helper.js';
-import { emailValidation, registerPasswordValidation, usernameValidation } from '../tools/dataValidation.js'
 
 declare const axios: any;
+declare const Swal: any;
 
 export const attachRegisterFormListener = () => {
 	const registerForm = document.querySelector('#registerForm');
 	const showPasswordIcon = document.querySelector(".lucide-eye-icon");
 	const showPasswordIconConfirmation = document.querySelector(".lucide-eye-icon-confirmation");
-	console.log("The atachRegisterFormListener runs");
 
 	if (showPasswordIcon || showPasswordIconConfirmation)
 	{
@@ -23,20 +22,12 @@ export const attachRegisterFormListener = () => {
 	}
 	registerForm.addEventListener('submit', async (event) => {
 		event.preventDefault();
-		console.log("The event listener for the form is added");
-		console.log("The event is: ", event.target);
-
 		const registerForm = document.querySelector('#registerForm') as HTMLFormElement;
 		const formData = new FormData(registerForm);
-
 		const email = formData.get('email') as string;
 		const password = formData.get('password') as string;
 		const passwordConfirmation = formData.get('passwordConfirmation') as string;
 		const nickName = formData.get('nickName') as string;
-
-		if (!emailValidation(email)) return;
-		if (!registerPasswordValidation(password, passwordConfirmation)) return;
-		if (!usernameValidation(nickName)) return;
 
 		try {
 			const response = await axios.post('https://trans.ella-peeters.me/api/register', {
@@ -54,7 +45,13 @@ export const attachRegisterFormListener = () => {
 
 			
 		} catch (error) {
-			console.error("The error is: ", error);
+			const errorMessage = error?.response?.data?.error || "Something went wrong. Try again later!";
+
+			Swal.fire({
+				title: 'Error!',
+				text: errorMessage,
+				icon: 'error',
+			});
 		}
 
 	});

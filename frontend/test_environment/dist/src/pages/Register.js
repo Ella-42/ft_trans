@@ -2,12 +2,10 @@ import { renderNavBar } from '../components/NavBar.js';
 import { renderFooter } from '../components/Footer.js';
 import { navigateTo } from '../../router.js';
 import { togglePassword } from '../tools/helper.js';
-import { emailValidation, registerPasswordValidation, usernameValidation } from '../tools/dataValidation.js';
 export const attachRegisterFormListener = () => {
     const registerForm = document.querySelector('#registerForm');
     const showPasswordIcon = document.querySelector(".lucide-eye-icon");
     const showPasswordIconConfirmation = document.querySelector(".lucide-eye-icon-confirmation");
-    console.log("The atachRegisterFormListener runs");
     if (showPasswordIcon || showPasswordIconConfirmation) {
         showPasswordIcon.addEventListener('click', () => {
             togglePassword();
@@ -18,20 +16,12 @@ export const attachRegisterFormListener = () => {
     }
     registerForm.addEventListener('submit', async (event) => {
         event.preventDefault();
-        console.log("The event listener for the form is added");
-        console.log("The event is: ", event.target);
         const registerForm = document.querySelector('#registerForm');
         const formData = new FormData(registerForm);
         const email = formData.get('email');
         const password = formData.get('password');
         const passwordConfirmation = formData.get('passwordConfirmation');
         const nickName = formData.get('nickName');
-        if (!emailValidation(email))
-            return;
-        if (!registerPasswordValidation(password, passwordConfirmation))
-            return;
-        if (!usernameValidation(nickName))
-            return;
         try {
             const response = await axios.post('https://trans.ella-peeters.me/api/register', {
                 email: String(email),
@@ -47,7 +37,12 @@ export const attachRegisterFormListener = () => {
             navigateTo('/safe/login');
         }
         catch (error) {
-            console.error("The error is: ", error);
+            const errorMessage = error?.response?.data?.error || "Something went wrong. Try again later!";
+            Swal.fire({
+                title: 'Error!',
+                text: errorMessage,
+                icon: 'error',
+            });
         }
     });
 };

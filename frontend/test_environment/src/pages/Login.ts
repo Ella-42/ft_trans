@@ -2,14 +2,13 @@ import { renderNavBar } from '../components/NavBar.js'
 import { renderFooter } from '../components/Footer.js'
 import { navigateTo } from '../../router.js'
 import { togglePassword } from '../tools/helper.js';
-import { emailValidation, loginPasswordValidation, invalidLogin, emailUnverified } from '../tools/dataValidation.js'
 
 declare const axios: any;
+declare const Swal: any;
 
 export const attachLoginFormListener = () => {
 	const loginForm = document.querySelector('#loginForm');
 	const showPasswordIcon = document.querySelector(".lucide-eye-icon");
-	console.log("The attachLoginFormListener runs");
 
 	if (showPasswordIcon)
 	{
@@ -20,16 +19,10 @@ export const attachLoginFormListener = () => {
 
 	loginForm.addEventListener('submit', async (event) => {
 		event.preventDefault();
-		console.log("The login function runs");
-
 		const loginForm = document.querySelector('#loginForm') as HTMLFormElement;
 		const formData = new FormData(loginForm);
-
 		const email = formData.get('email') as string;
 		const password = formData.get('password') as string;
-
-		if (!emailValidation(email)) return;
-		if (!loginPasswordValidation(password)) return;
 
 		try
 		{
@@ -44,19 +37,17 @@ export const attachLoginFormListener = () => {
 					'Content-Type': 'application/json'
 				}
 			})
-			console.log("The reponse after logging in is: ", response);
 			sessionStorage.setItem('loginSuccess', 'true');
 			navigateTo('/safe/dashboard');
 		} catch (error)
 		{
-			if (error.response.data.error === "Unauthorized: email unverified")
-			{
-				emailUnverified();
-			}
-			else
-			{
-				invalidLogin();
-			}
+			const errorMessage = error?.response?.data?.error || "Something went wrong. Try again later!";
+
+			Swal.fire({
+				title: 'Error!',
+				text: errorMessage,
+				icon: 'error',
+			});
 		}
 
 	});

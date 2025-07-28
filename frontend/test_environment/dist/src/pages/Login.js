@@ -2,11 +2,9 @@ import { renderNavBar } from '../components/NavBar.js';
 import { renderFooter } from '../components/Footer.js';
 import { navigateTo } from '../../router.js';
 import { togglePassword } from '../tools/helper.js';
-import { emailValidation, loginPasswordValidation, invalidLogin, emailUnverified } from '../tools/dataValidation.js';
 export const attachLoginFormListener = () => {
     const loginForm = document.querySelector('#loginForm');
     const showPasswordIcon = document.querySelector(".lucide-eye-icon");
-    console.log("The attachLoginFormListener runs");
     if (showPasswordIcon) {
         showPasswordIcon.addEventListener('click', () => {
             togglePassword();
@@ -14,15 +12,10 @@ export const attachLoginFormListener = () => {
     }
     loginForm.addEventListener('submit', async (event) => {
         event.preventDefault();
-        console.log("The login function runs");
         const loginForm = document.querySelector('#loginForm');
         const formData = new FormData(loginForm);
         const email = formData.get('email');
         const password = formData.get('password');
-        if (!emailValidation(email))
-            return;
-        if (!loginPasswordValidation(password))
-            return;
         try {
             const response = await axios.post('https://trans.ella-peeters.me/api/login', {
                 email: String(email),
@@ -32,17 +25,16 @@ export const attachLoginFormListener = () => {
                     'Content-Type': 'application/json'
                 }
             });
-            console.log("The reponse after logging in is: ", response);
             sessionStorage.setItem('loginSuccess', 'true');
             navigateTo('/safe/dashboard');
         }
         catch (error) {
-            if (error.response.data.error === "Unauthorized: email unverified") {
-                emailUnverified();
-            }
-            else {
-                invalidLogin();
-            }
+            const errorMessage = error?.response?.data?.error || "Something went wrong. Try again later!";
+            Swal.fire({
+                title: 'Error!',
+                text: errorMessage,
+                icon: 'error',
+            });
         }
     });
 };
