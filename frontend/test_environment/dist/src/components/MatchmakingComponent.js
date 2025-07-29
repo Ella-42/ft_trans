@@ -12,16 +12,29 @@ export const attachMatchmakingPong = async () => {
         // Ball
         ctx.beginPath();
         ctx.arc(game.ballX, game.ballY, 12.5, 0, 2 * Math.PI);
-        ctx.fillStyle = 'white';
+        ctx.fillStyle = '#0099FF';
+        ctx.shadowColor = '#AB5CFF';
+        ctx.shadowBlur = 7;
         ctx.fill();
         // Paddles
-        ctx.fillStyle = 'white';
-        ctx.fillRect(game.paddle1.x, game.paddle1.y, game.paddle1.width, game.paddle1.height);
-        ctx.fillRect(game.paddle2.x, game.paddle2.y, game.paddle2.width, game.paddle2.height);
+        ctx.fillStyle = '#0099FF';
+        ctx.shadowColor = '#AB5CFF';
+        ctx.shadowBlur = 5;
+        // Left paddle
+        ctx.beginPath();
+        ctx.roundRect(game.paddle1.x, game.paddle1.y, game.paddle1.width, game.paddle1.height, 16);
+        ctx.fill();
+        // Right paddle
+        ctx.beginPath();
+        ctx.roundRect(game.paddle2.x, game.paddle2.y, game.paddle2.width, game.paddle2.height, 16);
+        ctx.fill();
         // Scores
-        ctx.font = '20px sans-serif';
-        ctx.fillText(`P1: ${game.player1Score}`, 50, 30);
-        ctx.fillText(`P2: ${game.player2Score}`, canvas.width - 100, 30);
+        ctx.font = '16px monospace';
+        ctx.fillStyle = '#B62EFF';
+        ctx.shadowColor = '#6A00A3';
+        ctx.shadowBlur = 5;
+        ctx.fillText(`Player 1: ${game.player1Score}`, 50, 30);
+        ctx.fillText(`Player 2: ${game.player2Score}`, canvas.width - 150, 30);
     }
     async function currentId() {
         try {
@@ -42,25 +55,25 @@ export const attachMatchmakingPong = async () => {
             return null;
         }
     }
-    // Send paddle movement with arrow keys
+    // Send paddle movement with arrow up, down, w and s
     window.addEventListener('keydown', (e) => {
         keyPressed[e.key] = true;
-        if (['ArrowUp', 'ArrowDown'].includes(e.key) && started) {
+        if (['ArrowUp', 'ArrowDown', 'w', 's'].includes(e.key) && started) {
             e.preventDefault(); // Prevent scrolling
         }
     });
     window.addEventListener('keyup', (e) => {
         keyPressed[e.key] = false;
-        if (['ArrowUp', 'ArrowDown'].includes(e.key) && started) {
+        if (['ArrowUp', 'ArrowDown', 'w', 's'].includes(e.key) && started) {
             e.preventDefault(); // Prevent scrolling
         }
     });
     function handleInput() {
         if (!socket || socket.readyState !== WebSocket.OPEN)
             return;
-        if (keyPressed['ArrowUp'])
+        if (keyPressed['ArrowUp'] || keyPressed['w'])
             socket.send(JSON.stringify({ type: 'move', direction: 'up' }));
-        if (keyPressed['ArrowDown'])
+        if (keyPressed['ArrowDown'] || keyPressed['s'])
             socket.send(JSON.stringify({ type: 'move', direction: 'down' }));
     }
     // start connection
@@ -97,10 +110,10 @@ export const attachMatchmakingPong = async () => {
                 await currentId().then(currentUserId => {
                     const isWinner = msg.winner.id === currentUserId;
                     if (isWinner) {
-                        document.getElementById('status').textContent = `Game Over! You WIN! Winner: ${msg.winner.name} , uid: ${msg.winner.id}`;
+                        document.getElementById('status').textContent = `You WIN! Winner: ${msg.winner.name}, UID: ${msg.winner.id}`;
                     }
                     else {
-                        document.getElementById('status').textContent = `Game Over! You LOSE! Winner: ${msg.winner.name} , uid: ${msg.winner.id}`;
+                        document.getElementById('status').textContent = `You LOSE! Winner: ${msg.winner.name}, UID: ${msg.winner.id}`;
                     }
                 });
             }
@@ -122,7 +135,7 @@ export const attachMatchmakingPong = async () => {
         };
     }
     const myuid = await currentId();
-    document.getElementById('title').textContent = 'Pong Frontend Test: Current UID: ' + myuid;
+    document.getElementById('title').textContent = 'PONG: Hope You Have Fun! Your UID: ' + myuid;
     connect();
 };
 export const renderMatchmaking = () => {
@@ -131,10 +144,12 @@ export const renderMatchmaking = () => {
 					<div class="px-10 py-5 rounded-xl my-5 mb-10 bg-gray-900 flex justify-between items-center">
 						<p class="font-extralight text-xl" id="username-greeting">Hi, welcome 👋, you will be paired as soon as someone else joins.</p>
 					</div>
-					<div class="text-white text-center">
-						<h1 id="title">Pong Frontend Test: Current UID: </h1>
-						<p id="status">Connecting...</p>
-						<canvas class="mx-auto bg-black border-2 border-white block mt-8 mb-8" id="gameCanvas" width="500" height="500"></canvas>
+					<div class="text-center text-purple-300 font-mono">
+						<h1 id="title" class="text-2xl mb-4 tracking-widest drop-shadow-[0_0_5px_#8B5CF6]">
+							PONG: Hope You Have Fun! Your UID:
+						</h1>
+						<canvas id="gameCanvas" class="mx-auto bg-black border-2 border-purple-600 rounded-xl shadow-[0_0_20px_#7C3AED]" width="500" height="500"></canvas>
+						<p id="status" class="mt-4 text-2xl text-blue-300 drop-shadow-[0_0_5px_#3B82F6]">Connecting...</p>
 					</div>
 				</div>
 	  `;
