@@ -11,6 +11,7 @@ export function renderLoggedInSideBar() {
 				</div>
 				<div class="hidden flex md:flex flex-col pb-5 px-7">
 					<a data-link href="/safe/dashboard" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Dashboard</a>
+					<a data-link href="/safe/dashboard/play" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Play Now</a>
 					<a data-link href="/safe/dashboard/matchmaking" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Matchmaking</a>
 					<a data-link href="/safe/dashboard/tournament" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Tournament</a>
 					<a data-link href="/safe/dashboard/profile" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Profile</a>

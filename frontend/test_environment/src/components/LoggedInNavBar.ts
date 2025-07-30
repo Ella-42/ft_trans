@@ -26,6 +26,7 @@ export function renderLoggedInNavBar(user: User): string {
 				</div>
 				<div class="hidden flex md:flex md:flex-row flex-col items-center justify-start pb-5 md:space-x-5 pb-3 md:pb-0 navigation-menu-logged-in">
 				<a data-link href="/dashboard" class="text-base py-2 text-white hover:pl-3 hover:text-gray-400">Dashboard</a>
+					<a data-link href="/play" class="text-base py-2 text-white hover:pl-3 hover:text-gray-400">Play Now</a>
 					<a data-link href="/matchmaking" class="text-base py-2 text-white hover:pl-3 hover:text-gray-400">Matchmaking</a>
 					<a data-link href="/tournament" class="text-base py-2 text-white hover:pl-3 hover:text-gray-400">Tournament</a>
 					<a data-link href="/profile" class="text-base py-2 text-white hover:pl-3 hover:text-gray-400">Profile</a>

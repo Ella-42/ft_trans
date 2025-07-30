@@ -2,17 +2,15 @@ import { renderHomePage } from "./src/pages/HomePage.js";
 import { renderCookiePolicy } from "./src/pages/CookiePolicy.js";
 import { renderPrivacyPolicy } from "./src/pages/PrivacyPolicy.js";
 import { renderTermsAndConditions } from "./src/pages/TermsAndConditions.js";
-import { renderLogin } from "./src/pages/Login.js";
-import { renderRegister } from "./src/pages/Register.js";
-import { attachRegisterFormListener } from './src/pages/Register.js';
-import { attachLoginFormListener } from './src/pages/Login.js';
+import { renderLogin, attachLoginFormListener } from "./src/pages/Login.js";
+import { renderRegister, attachRegisterFormListener } from "./src/pages/Register.js";
+import { renderDashboard, attachDashboardListener } from './src/pages/Dashboard.js';
 import { renderDashboardComponent } from './src/components/DashboardComponent.js';
-import { renderDashboard } from './src/pages/Dashboard.js';
 import { renderProfile, attachUpdateProfileFormListener } from './src/components/ProfileComponent.js';
+import { renderPlayNow, attachPlayNowPong } from './src/components/PlayNowComponent.js';
 import { renderMatchmaking, attachMatchmakingPong } from './src/components/MatchmakingComponent.js';
 import { renderTournament } from './src/components/TournamentComponent.js';
 import { renderStats } from './src/components/StatsComponent.js';
-import { attachDashboardListener } from './src/pages/Dashboard.js';
 const routes = {
     "/safe": renderHomePage,
     "/safe/login": renderLogin,
@@ -23,6 +21,7 @@ const routes = {
 };
 const dashboardRoutes = {
     "/safe/dashboard": (user) => renderDashboardComponent(user),
+    "/safe/dashboard/play": () => renderPlayNow(),
     "/safe/dashboard/matchmaking": () => renderMatchmaking(),
     "/safe/dashboard/tournament": () => renderTournament(),
     "/safe/dashboard/profile": () => renderProfile(),
@@ -62,6 +61,9 @@ export const router = async () => {
                     document.getElementById("dashboard-content").innerHTML = innerContent(user);
                     if (path === "/safe/dashboard/profile") {
                         attachUpdateProfileFormListener();
+                    }
+                    else if (path === "/safe/dashboard/play") {
+                        attachPlayNowPong();
                     }
                     else if (path === "/safe/dashboard/matchmaking") {
                         attachMatchmakingPong();
