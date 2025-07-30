@@ -1,9 +1,21 @@
 import { renderNavBar } from '../components/NavBar.js';
 import { renderFooter } from '../components/Footer.js';
-export function renderTermsAndConditions() {
+export async function renderTermsAndConditions() {
+    let isLoggedIn = false;
+    try {
+        const res = await axios.get('https://trans.ella-peeters.me/api/users/verifytoken', {
+            withCredentials: true
+        });
+        if (res.data.message === "OK") {
+            isLoggedIn = true;
+        }
+    }
+    catch (err) {
+        console.warn("User is not logged in or token is invalid:", err);
+    }
     return `
 	<section class="flex flex-col bg-primary-background min-h-screen text-white">
-		${renderNavBar()}
+		${renderNavBar(isLoggedIn)}
 			<main class="flex-1 container px-5 py-10 mx-auto max-w-4xl">
 				<h1 class="text-4xl font-bold mb-8 text-primary">Terms of Service – Retropong</h1>
 

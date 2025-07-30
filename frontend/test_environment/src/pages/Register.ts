@@ -57,9 +57,24 @@ export const attachRegisterFormListener = () => {
 	});
 };
 
-export const renderRegister = (): string => {
+export async function renderRegister(): Promise<string> {
+
+	let isLoggedIn = false;
+
+	try {
+		const res = await axios.get('https://trans.ella-peeters.me/api/users/verifytoken', {
+			withCredentials: true 
+		});
+
+		if (res.data.message === "OK") {
+			isLoggedIn = true;
+		}
+	} catch (err) {
+		console.warn("User is not logged in or token is invalid:", err);
+	}
+
 	return `
-  	${renderNavBar()}
+  	${renderNavBar(isLoggedIn)}
 	  <section class="bg-hero-pattern text-white bg-cover bg-top w-full">
 		<div class="container px-5 md:px-10 h-screen flex items-center justify-center">
 			<div class="px-6 flex flex-col items-center bg-primary-background rounded-xl w-96">

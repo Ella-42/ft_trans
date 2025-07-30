@@ -80,7 +80,7 @@ export const router = async () => {
     //setTimeout(attachMenuListener, 0);
     //setTimeout(attachRegisterFormListener, 0);
     const page = routes[path] ? routes[path]() : "<h1>404 - Page Not Found</h1>";
-    app.innerHTML = page;
+    app.innerHTML = await page;
     attachMenuListener();
     if (path === "/safe/register")
         attachRegisterFormListener();

@@ -8,6 +8,7 @@ export const attachUpdateProfileFormListener = async () => {
 	const showOldPasswordIcon = document.querySelector('.lucide-eye-icon');
 	const showNewPasswordIcon= document.querySelector('.lucide-eye-icon-new');
 
+
 	if (showOldPasswordIcon || showNewPasswordIcon)
 	{
 		showOldPasswordIcon.addEventListener('click', () => {
@@ -47,9 +48,33 @@ export const attachUpdateProfileFormListener = async () => {
 
 	const deleteProfileButton = document.querySelector("#deleteProfileButton");
 	deleteProfileButton.addEventListener('click', async (e) => {
-		e.preventDefault();
-		console.log("The button to delete the profile has been clicked!");
+		if (deleteProfileButton) {
+				const confirmed = confirm("Are you sure you want to delete your profile? This action cannot be undone.");
+				const token = localStorage.getItem('token');
+				if (!token)
+					return;
+			
+				if (confirmed) {
+					try {
+						const deleteResponse = await axios.delete(`https://trans.ella-peeters.me/api/users/${response.data.id}`, {
+						headers: {
+							Authorization: `Bearer ${token}`
+						}
+						});
+					
+						sessionStorage.clear();
+						window.location.href = '/safe';
+					} catch (error) {
+						Swal.fire({
+							title: "Error",
+							text: "There was an error deleting your account. Try again later!",
+							icon: "error"
+						})
+					}
+				}	
+		}
 	});
+	
 
 	const updateProfileButton = document.querySelector('#updateProfileButton');
 	updateProfileButton.addEventListener('click', async (e) => {
@@ -68,17 +93,6 @@ export const attachUpdateProfileFormListener = async () => {
 		if (avatarInput?.value) body.avatar = avatarInput.value;
 		if (newPasswordInput?.value) body.password = newPasswordInput.value;
 		if (oldPasswordInput?.value) body.oldPassword = oldPasswordInput.value;
-
-		if (Object.keys(body).length === 0)
-		{	
-			Swal.fire(
-			{
-				title: 'Oops!',
-				text: "All fields empty",
-				icon: 'error',
-			})
-			return;
-		}
 
 		const res = await fetch(`https://trans.ella-peeters.me/api/users/${response.data.id}`, {
 			method: 'PUT',

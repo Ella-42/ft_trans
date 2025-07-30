@@ -18,7 +18,7 @@ import { attachUpdateProfileFormListener } from './src/components/ProfileCompone
 
 declare const axios: any;
 
-const routes: { [key: string]: () => string } = {
+const routes: { [key: string]: () => string | Promise<string> } = {
 	"/safe": renderHomePage,
 	"/safe/login": renderLogin,
 	"/safe/cookie-policy": renderCookiePolicy,
@@ -94,7 +94,7 @@ export const router = async () => {
     //setTimeout(attachRegisterFormListener, 0);
 
     const page = routes[path] ? routes[path]() : "<h1>404 - Page Not Found</h1>";
-    app.innerHTML = page;
+    app.innerHTML = await page;
 
     attachMenuListener();
 
