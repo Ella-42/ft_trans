@@ -13,8 +13,12 @@ export const attachPlayNowPong = async () => {
 	let gameType = null;
     const keyPressed = {};
     let keyInt = null;
+	let downListener = null;
+	let upListener = null;
 
     (window as any).pongClean = function clean() {
+		window.removeEventListener('keydown', downListener);
+		window.removeEventListener('keyup', upListener);
 		if (socket) {
 			socket.onclose = null;
 			socket.onmessage = null;
@@ -60,18 +64,20 @@ export const attachPlayNowPong = async () => {
     }
 
     // Send paddle movement with arrow up, down, w and s
-    window.addEventListener('keydown', (e) => {
+	downListener = (e) => {
       keyPressed[e.key] = true;
       if (['ArrowUp', 'ArrowDown', 'w', 's'].includes(e.key) && started) {
         e.preventDefault(); // Prevent scrolling
       }
-    });
-    window.addEventListener('keyup', (e) => {
+    };
+	upListener = (e) => {
       keyPressed[e.key] = false;
       if (['ArrowUp', 'ArrowDown', 'w', 's'].includes(e.key) && started) {
         e.preventDefault(); // Prevent scrolling
       }
-    });
+    };
+	window.addEventListener('keydown', downListener);
+	window.addEventListener('keyup', upListener);
     function handleInput() {
       if (!socket || socket.readyState !== WebSocket.OPEN) return;
 
@@ -114,7 +120,7 @@ export const attachPlayNowPong = async () => {
 
           document.getElementById('status').innerHTML = `
               <p id="status" class="mt-4 text-2xl text-blue-300 drop-shadow-[0_0_5px_#3B82F6]">Disconnected. Click the button to reconnect:</p>
-              <button id="reconnectBtn" class="px-4 py-2 rounded-xlbg-indigo-700 hover:bg-indigo-800 text-white shadow-md transition drop-shadow-[0_0_5px_#3B82F6]">Reconnect</button>
+              <button id="reconnectBtn" class="px-4 py-2 rounded-xl bg-indigo-700 hover:bg-indigo-800 text-white shadow-md transition drop-shadow-[0_0_5px_#3B82F6]">Reconnect</button>
           `;
           document.getElementById('reconnectBtn').onclick = () => {
             socket.send(JSON.stringify({ type: 'localReconnect', roomId: roomId }));

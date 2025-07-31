@@ -6,7 +6,7 @@
 #    By: lpeeters <lpeeters@student.s19.be>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/04 21:07:01 by lpeeters          #+#    #+#              #
-#    Updated: 2025/07/08 19:42:20 by lpeeters         ###   ########.fr        #
+#    Updated: 2025/07/31 21:48:46 by lpeeters         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -41,6 +41,10 @@ mailserver:
 database:
 	@docker exec -it database sh
 
+# Shell into the websocket Docker container
+websocket:
+	@docker exec -it websocket sh
+
 # Remove all Docker containers, images, volumes and networks
 clean:
 	@docker stop $$(docker ps -qa) $(silent); \
@@ -53,6 +57,8 @@ clean:
 log:
 	@	echo "database:\n"; \
 		docker logs database \
+	&&	echo "\n\websocket:\n" \
+	&&	docker logs websocket \
 	&&	echo "\n\nauthenticator:\n" \
 	&&	docker logs authenticator \
 	&&	echo "\n\nmailserver:\n" \
@@ -76,6 +82,10 @@ logMailserver:
 logDatabase:
 	@docker logs database
 
+# Display logs for the websocket Docker container
+logWebsocket:
+	@docker logs websocket
+
 # Restart the Docker stack
 re: down clean up
 
@@ -95,5 +105,9 @@ reMailserver:
 reDatabase:
 	@docker restart database
 
+# Restart the websocket Docker container
+reWebsocket:
+	@docker restart websocket
+
 # Targets
-.PHONY: up down status nginx authenticator mailserver database clean log logNginx logAuthenticator logMailserver logDatabase re reNginx reAuthenticator reMailserver reDatabase
+.PHONY: up down status nginx authenticator mailserver database websocket clean log logNginx logAuthenticator logMailserver logDatabase logWebsocket re reNginx reAuthenticator reMailserver reDatabase reWebsocket
