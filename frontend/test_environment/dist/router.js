@@ -28,6 +28,8 @@ const dashboardRoutes = {
     "/safe/dashboard/stats": () => renderStats(),
 };
 export const navigateTo = (url) => {
+    window.pongClean?.();
+    window.pongClean = null;
     history.pushState({}, "", url);
     router(); // Re-render the page
 };

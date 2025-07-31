@@ -34,6 +34,8 @@ const dashboardRoutes: { [key: string]: (user: any) => string } = {
 };
 
 export const navigateTo = (url: string) => {
+	(window as any).pongClean?.();
+	(window as any).pongClean = null;
 	history.pushState({}, "", url);
 	router(); // Re-render the page
 };

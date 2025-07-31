@@ -10,6 +10,15 @@ export const attachPlayNowPong = async () => {
     let gameType = null;
     const keyPressed = {};
     let keyInt = null;
+    window.pongClean = function clean() {
+        if (socket) {
+            socket.onclose = null;
+            socket.onmessage = null;
+            socket.onerror = null;
+            socket.close();
+            socket = null;
+        }
+    };
     function draw(game) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         // Ball

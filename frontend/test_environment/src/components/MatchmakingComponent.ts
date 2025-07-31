@@ -11,6 +11,16 @@ export const attachMatchmakingPong = async () => {
     const keyPressed = {};
     let keyInt = null;
 
+    (window as any).pongClean = function clean() {
+		if (socket) {
+			socket.onclose = null;
+			socket.onmessage = null;
+			socket.onerror = null;
+			socket.close();
+			socket = null;
+		}
+	};
+
     function draw(game) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
