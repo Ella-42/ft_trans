@@ -132,6 +132,11 @@
           document.getElementById('status').textContent = `Room closed: ${msg.reason}`;
         } else if (msg.type === 'reconnected') {
           paddleNumber = msg.paddleNumber;
+          gameOver = false;
+          started = true;
+          if (!keyInt) {
+            keyInt = setInterval(handleInput, 1000 / 30);
+          }
           document.getElementById('status').textContent = `Reconnected to room ${msg.roomId}`;
         }
       };

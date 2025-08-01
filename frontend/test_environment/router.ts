@@ -2,17 +2,15 @@ import { renderHomePage } from "./src/pages/HomePage.js";
 import { renderCookiePolicy } from "./src/pages/CookiePolicy.js";
 import { renderPrivacyPolicy } from "./src/pages/PrivacyPolicy.js";
 import { renderTermsAndConditions } from "./src/pages/TermsAndConditions.js";
-import { renderLogin } from "./src/pages/Login.js";
-import { renderRegister } from "./src/pages/Register.js";
-import { attachRegisterFormListener } from './src/pages/Register.js';
-import { attachLoginFormListener } from './src/pages/Login.js';
+import { renderLogin, attachLoginFormListener } from "./src/pages/Login.js";
+import { renderRegister, attachRegisterFormListener } from "./src/pages/Register.js";
+import { renderDashboard, attachDashboardListener } from './src/pages/Dashboard.js';
 import { renderDashboardComponent } from './src/components/DashboardComponent.js';
-import { renderDashboard } from './src/pages/Dashboard.js';
-import { renderProfile } from './src/components/ProfileComponent.js';
-import { renderMatchmaking } from './src/components/MatchmakingComponent.js';
+import { renderProfile, attachUpdateProfileFormListener } from './src/components/ProfileComponent.js';
+import { renderPlayNow, attachPlayNowPong } from './src/components/PlayNowComponent.js';
+import { renderMatchmaking, attachMatchmakingPong } from './src/components/MatchmakingComponent.js';
 import { renderTournament } from './src/components/TournamentComponent.js';
 import { renderStats } from './src/components/StatsComponent.js';
-import { attachDashboardListener } from './src/pages/Dashboard.js';
 import { getCookie } from './src/tools/helper.js';
 import { attachUpdateProfileFormListener } from './src/components/ProfileComponent.js';
 import { attachStatsListener } from './src/components/StatsComponent.js';
@@ -30,6 +28,7 @@ const routes: { [key: string]: () => string | Promise<string> } = {
 
 const dashboardRoutes: { [key: string]: (user: any) => string } = {
 	"/safe/dashboard": (user) => renderDashboardComponent(user),
+	"/safe/dashboard/play": () => renderPlayNow(),
 	"/safe/dashboard/matchmaking": () => renderMatchmaking(),
 	"/safe/dashboard/tournament": () => renderTournament(),
 	"/safe/dashboard/profile": () => renderProfile(),
@@ -37,6 +36,8 @@ const dashboardRoutes: { [key: string]: (user: any) => string } = {
 };
 
 export const navigateTo = (url: string) => {
+	(window as any).pongClean?.();
+	(window as any).pongClean = null;
 	history.pushState({}, "", url);
 	router(); // Re-render the page
 };
@@ -81,6 +82,13 @@ export const router = async () => {
 				else if (path === "/safe/dashboard/stats")
 				{
 					attachStatsListener();
+				else if (path === "/safe/dashboard/play")
+				{
+					attachPlayNowPong();
+				}
+				else if (path === "/safe/dashboard/matchmaking")
+				{
+					attachMatchmakingPong();
 				}
         		} else {
           			document.getElementById("dashboard-content").innerHTML = `<p>404 - Page not found in dashboard</p>`;
