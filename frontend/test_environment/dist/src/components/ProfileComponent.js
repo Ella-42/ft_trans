@@ -98,8 +98,10 @@ export const renderProfile = () => {
     return `
 				<div class="px-5 flex flex-col md:flex-col flex-1">
 					<div class="px-10 py-5 rounded-xl my-5 mb-10 bg-gray-900 flex flex-col justify-between ">
-						<p class="text-xl mb-8" id="">Edit your profile and account settings.</p>
-
+						<div>
+							<h1 class="text-3xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Profile</h1>
+							<p className="text-slate-400">Edit your profile and account settings</p>
+						</div>
 						<p class="text-xl mt-10 mb-4">Settings</p>
 						<p class="mt-10 mb-2">Two-Factor Authentication</p>
 						<div class="flex items-center gap-4 mb-8">

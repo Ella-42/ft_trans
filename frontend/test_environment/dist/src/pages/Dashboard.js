@@ -6,7 +6,6 @@ export const attachDashboardListener = async () => {
     console.log("The attachDashboardistener runs");
     try {
         const response = await axios.get('https://trans.ella-peeters.me/api/whoami');
-        console.log("The reponse after logging in is: ", response);
         const user = response.data;
     }
     catch (error) {

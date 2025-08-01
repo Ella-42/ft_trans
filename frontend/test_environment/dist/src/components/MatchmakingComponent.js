@@ -143,7 +143,7 @@ export const attachMatchmakingPong = async () => {
                 gameOver = false;
                 started = true;
                 if (!keyInt) {
-                  keyInt = setInterval(handleInput, 1000 / 30);
+                    keyInt = setInterval(handleInput, 1000 / 30);
                 }
                 document.getElementById('status').textContent = `Reconnected to room ${msg.roomId}`;
             }

@@ -11,9 +11,10 @@ import { renderPlayNow, attachPlayNowPong } from './src/components/PlayNowCompon
 import { renderMatchmaking, attachMatchmakingPong } from './src/components/MatchmakingComponent.js';
 import { renderTournament } from './src/components/TournamentComponent.js';
 import { renderStats } from './src/components/StatsComponent.js';
+import { renderFriends } from './src/components/FriendsComponent.js';
 import { getCookie } from './src/tools/helper.js';
-import { attachUpdateProfileFormListener } from './src/components/ProfileComponent.js';
 import { attachStatsListener } from './src/components/StatsComponent.js';
+import { attachFriendsListener } from './src/components/FriendsComponent.js';
 
 declare const axios: any;
 
@@ -32,7 +33,8 @@ const dashboardRoutes: { [key: string]: (user: any) => string } = {
 	"/safe/dashboard/matchmaking": () => renderMatchmaking(),
 	"/safe/dashboard/tournament": () => renderTournament(),
 	"/safe/dashboard/profile": () => renderProfile(),
-	"/safe/dashboard/stats": () => renderStats(),
+	"/safe/dashboard/stats": () => "",
+	"/safe/dashboard/friends": () => "",
 };
 
 export const navigateTo = (url: string) => {
@@ -82,6 +84,7 @@ export const router = async () => {
 				else if (path === "/safe/dashboard/stats")
 				{
 					attachStatsListener();
+				}
 				else if (path === "/safe/dashboard/play")
 				{
 					attachPlayNowPong();
@@ -89,6 +92,10 @@ export const router = async () => {
 				else if (path === "/safe/dashboard/matchmaking")
 				{
 					attachMatchmakingPong();
+				}
+				else if (path === "/safe/dashboard/friends")
+				{
+					attachFriendsListener();
 				}
         		} else {
           			document.getElementById("dashboard-content").innerHTML = `<p>404 - Page not found in dashboard</p>`;
