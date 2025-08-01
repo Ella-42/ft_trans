@@ -42,3 +42,9 @@ export const provideUserFeedback = (response) => {
 		})
 	}
 }
+
+export const updateHeaderInNavbar = (title: string) => {
+	const dashboardTitle = document.querySelector("#dashboard-title");
+	dashboardTitle.textContent=title;
+}
+

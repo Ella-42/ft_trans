@@ -23,7 +23,7 @@ export const renderDashboard = (user: User): string => {
 	return `
 	<section class="flex min-h-screen">
 		${renderLoggedInSideBar()}
-		<section class="flex flex-col w-full h-full">
+		<section class="flex flex-col w-full min-h-full">
 			${renderLoggedInNavBar(user)}
 			<section id="dashboard-content" class="bg-primary-background text-white w-full flex-1 justify-between">
 				

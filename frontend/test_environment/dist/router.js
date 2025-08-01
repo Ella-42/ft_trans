@@ -14,6 +14,7 @@ import { renderTournament } from './src/components/TournamentComponent.js';
 import { renderStats } from './src/components/StatsComponent.js';
 import { attachDashboardListener } from './src/pages/Dashboard.js';
 import { attachUpdateProfileFormListener } from './src/components/ProfileComponent.js';
+import { attachStatsListener } from './src/components/StatsComponent.js';
 const routes = {
     "/safe": renderHomePage,
     "/safe/login": renderLogin,
@@ -63,6 +64,9 @@ export const router = async () => {
                     document.getElementById("dashboard-content").innerHTML = innerContent(user);
                     if (path === "/safe/dashboard/profile") {
                         attachUpdateProfileFormListener();
+                    }
+                    else if (path === "/safe/dashboard/stats") {
+                        attachStatsListener();
                     }
                 }
                 else {

@@ -15,6 +15,7 @@ import { renderStats } from './src/components/StatsComponent.js';
 import { attachDashboardListener } from './src/pages/Dashboard.js';
 import { getCookie } from './src/tools/helper.js';
 import { attachUpdateProfileFormListener } from './src/components/ProfileComponent.js';
+import { attachStatsListener } from './src/components/StatsComponent.js';
 
 declare const axios: any;
 
@@ -76,6 +77,10 @@ export const router = async () => {
 				if (path === "/safe/dashboard/profile")
 				{
 					attachUpdateProfileFormListener();
+				}
+				else if (path === "/safe/dashboard/stats")
+				{
+					attachStatsListener();
 				}
         		} else {
           			document.getElementById("dashboard-content").innerHTML = `<p>404 - Page not found in dashboard</p>`;
