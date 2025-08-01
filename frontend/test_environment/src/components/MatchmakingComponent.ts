@@ -10,8 +10,15 @@ export const attachMatchmakingPong = async () => {
     let gameOver = false;
     const keyPressed = {};
     let keyInt = null;
+    let downListener = null;
+    let upListener = null;
 
     (window as any).pongClean = function clean() {
+		window.removeEventListener('keydown', downListener);
+		window.removeEventListener('keyup', upListener);
+    if (keyInt) {
+      clearInterval(keyInt);
+    }
 		if (socket) {
 			socket.onclose = null;
 			socket.onmessage = null;
@@ -75,18 +82,20 @@ export const attachMatchmakingPong = async () => {
     }
 
     // Send paddle movement with arrow up, down, w and s
-    window.addEventListener('keydown', (e) => {
+    downListener = (e) => {
       keyPressed[e.key] = true;
       if (['ArrowUp', 'ArrowDown', 'w', 's'].includes(e.key) && started) {
         e.preventDefault(); // Prevent scrolling
       }
-    });
-    window.addEventListener('keyup', (e) => {
+    };
+	upListener = (e) => {
       keyPressed[e.key] = false;
       if (['ArrowUp', 'ArrowDown', 'w', 's'].includes(e.key) && started) {
         e.preventDefault(); // Prevent scrolling
       }
-    });
+    };
+	window.addEventListener('keydown', downListener);
+	window.addEventListener('keyup', upListener);
 
     function handleInput() {
       if (!socket || socket.readyState !== WebSocket.OPEN) return;
@@ -135,6 +144,11 @@ export const attachMatchmakingPong = async () => {
           document.getElementById('status').textContent = `Room closed: ${msg.reason}`;
         } else if (msg.type === 'reconnected') {
           paddleNumber = msg.paddleNumber;
+          gameOver = false;
+          started = true;
+          if (!keyInt) {
+            keyInt = setInterval(handleInput, 1000 / 30);
+          }
           document.getElementById('status').textContent = `Reconnected to room ${msg.roomId}`;
         }
       };

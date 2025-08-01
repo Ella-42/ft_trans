@@ -38,7 +38,7 @@ function findRoomByPlayerId(playerId) {
   return null;
 }
 
-fastify.get('/ws', { websocket: true }, async (conn, req) => {
+fastify.get('/ws/local', { websocket: true }, async (conn, req) => {
   conn.socket.on('message', async (message) => {
     try {
       const msg = JSON.parse(message.toString());
@@ -54,80 +54,13 @@ fastify.get('/ws', { websocket: true }, async (conn, req) => {
         await localReconnect(roomId, conn);
       } else if (type === 'localMove') {
         const lroomid = Object.keys(localRooms).find(rid =>
-                localRooms[rid].conn.socket === conn.socket);
+          localRooms[rid].conn && localRooms[rid].conn.socket === conn.socket);
         if (!lroomid) {
           conn.socket.close();
           return ;
         }
         const room = localRooms[lroomid];
         const paddle = msg.paddleNumber === 1 ? room.game.paddle1 : room.game.paddle2;
-
-        if (msg.direction === "up" && paddle.y > 0) {
-          paddle.y -= PADDLE_SPEED;
-        } else if (msg.direction === "down" && paddle.y < GAME_HEIGHT - paddle.height) {
-          paddle.y += PADDLE_SPEED;
-        }
-      } else if (type === 'ai') {
-        await handleAi(conn);
-      } else if (type === 'aiReadyLeft') {
-        await aiStart(roomId, conn, 1);
-      } else if (type === 'aiReadyRight') {
-        await aiStart(roomId, conn, 2);
-      } else if (type === 'aiReconnect') {
-        await aiReconnect(roomId, conn);
-      } else if (type === 'aiMove') {
-        const airoomid = Object.keys(aiRooms).find(rid =>
-                aiRooms[rid].conn.socket === conn.socket);
-        if (!airoomid) {
-          conn.socket.close();
-          return ;
-        }
-        const room = aiRooms[airoomid];
-        const paddle = room.paddle === 1 ? room.game.paddle1 : room.game.paddle2;
-
-        if (msg.direction === "up" && paddle.y > 0) {
-          paddle.y -= PADDLE_SPEED;
-        } else if (msg.direction === "down" && paddle.y < GAME_HEIGHT - paddle.height) {
-          paddle.y += PADDLE_SPEED;
-        }
-      } else {
-        try {
-          const cookies = cookie.parse(req.headers.cookie || '');
-          const tokenCookie = cookies.token;
-      
-          const token = fastify.unsignCookie(tokenCookie);
-          if (!token.valid || !token.value) {
-            conn.socket.close();
-            return;
-          }
-          let decoded;
-          try {
-            decoded = jwt.verify(token.value, publicKey, { algorithms: ['RS256'] });
-          } catch (err) {
-            conn.socket.close();
-            return;
-          }
-          conn.userId = decoded.id;
-          if (!conn.userId) {
-            conn.socket.close();
-            return;
-          }
-        } catch (err) {
-          conn.socket.close();
-          return;
-        }
-      }
-
-      if (type === 'auto_join') {
-        await handleAutoJoin(conn, conn.userId);
-      } else if (type === 'ready') {
-        await handleReady(roomId, conn.userId, conn);
-      } else if (type === 'move') {
-        const room = findRoomByPlayerId(conn.userId);
-        const sender = room.players.find(player => player.conn === conn);
-        if (!sender) return;
-
-        const paddle = sender.paddleNumber === 1 ? room.game.paddle1 : room.game.paddle2;
 
         if (msg.direction === "up" && paddle.y > 0) {
           paddle.y -= PADDLE_SPEED;
@@ -153,6 +86,47 @@ fastify.get('/ws', { websocket: true }, async (conn, req) => {
       localRooms[lroomid].lastActive = Date.now();
       return ;
     }
+  });
+});
+
+
+fastify.get('/ws/ai', { websocket: true }, async (conn, req) => {
+  conn.socket.on('message', async (message) => {
+    try {
+      const msg = JSON.parse(message.toString());
+      if (typeof msg !== 'object' || typeof msg.type !== 'string') return;
+
+      const { type, roomId } = msg;
+      if (type === 'ai') {
+        await handleAi(conn);
+      } else if (type === 'aiReadyLeft') {
+        await aiStart(roomId, conn, 1);
+      } else if (type === 'aiReadyRight') {
+        await aiStart(roomId, conn, 2);
+      } else if (type === 'aiReconnect') {
+        await aiReconnect(roomId, conn);
+      } else if (type === 'aiMove') {
+        const airoomid = Object.keys(aiRooms).find(rid =>
+          aiRooms[rid].conn && aiRooms[rid].conn.socket === conn.socket);
+        if (!airoomid) {
+          conn.socket.close();
+          return ;
+        }
+        const room = aiRooms[airoomid];
+        const paddle = room.paddle === 1 ? room.game.paddle1 : room.game.paddle2;
+
+        if (msg.direction === "up" && paddle.y > 0) {
+          paddle.y -= PADDLE_SPEED;
+        } else if (msg.direction === "down" && paddle.y < GAME_HEIGHT - paddle.height) {
+          paddle.y += PADDLE_SPEED;
+        }
+      }
+    } catch (err) {
+      console.error('Message error:', err);
+    }
+  });
+
+  conn.socket.on('close', () => {
     const airoomid = Object.keys(aiRooms).find(rid =>
       aiRooms[rid].conn && aiRooms[rid].conn.socket === conn.socket);
     if (airoomid) {
@@ -165,7 +139,66 @@ fastify.get('/ws', { websocket: true }, async (conn, req) => {
       aiRooms[airoomid].lastActive = Date.now();
       return ;
     }
+  });
+});
 
+
+fastify.get('/ws', { websocket: true }, async (conn, req) => {
+  conn.socket.on('message', async (message) => {
+    try {
+      const msg = JSON.parse(message.toString());
+      if (typeof msg !== 'object' || typeof msg.type !== 'string') return;
+
+      const { type, roomId } = msg;
+      try {
+        const cookies = cookie.parse(req.headers.cookie || '');
+        const tokenCookie = cookies.token;
+      
+        const token = fastify.unsignCookie(tokenCookie);
+        if (!token.valid || !token.value) {
+          conn.socket.close();
+          return;
+        }
+        let decoded;
+        try {
+          decoded = jwt.verify(token.value, publicKey, { algorithms: ['RS256'] });
+        } catch (err) {
+          conn.socket.close();
+          return;
+        }
+        conn.userId = decoded.id;
+        if (!conn.userId) {
+          conn.socket.close();
+          return;
+        }
+      } catch (err) {
+        conn.socket.close();
+        return;
+      }
+
+      if (type === 'auto_join') {
+        await handleAutoJoin(conn, conn.userId);
+      } else if (type === 'ready') {
+        await handleReady(roomId, conn.userId, conn);
+      } else if (type === 'move') {
+        const room = findRoomByPlayerId(conn.userId);
+        const sender = room.players.find(player => player.conn === conn);
+        if (!sender) return;
+
+        const paddle = sender.paddleNumber === 1 ? room.game.paddle1 : room.game.paddle2;
+
+        if (msg.direction === "up" && paddle.y > 0) {
+          paddle.y -= PADDLE_SPEED;
+        } else if (msg.direction === "down" && paddle.y < GAME_HEIGHT - paddle.height) {
+          paddle.y += PADDLE_SPEED;
+        }
+      }
+    } catch (err) {
+      console.error('Message error:', err);
+    }
+  });
+
+  conn.socket.on('close', () => {
     const room = findRoomByPlayerId(conn.userId);
     if (!room) return;
     const player = room.players.find(p => p.id === conn.userId);
@@ -298,10 +331,34 @@ function updateAi(game, playerPaddle) {
 }
 
 async function handleAi(conn) {
-  let roomId, room;
+  /*
+  let existingRoomId = Object.keys(localRooms).find(rid =>
+    localRooms[rid].conn && localRooms[rid].conn.socket === conn.socket);
+  if (existingRoomId) {
+    const room = localRooms[existingRoomId];
+    if (room.gameLoopInterval) {
+      clearInterval(room.gameLoopInterval);
+    }
+    if (room.conn) {
+      room.conn.socket.close();
+    }
+    delete localRooms[roomId];
+  }
+  existingRoomId = Object.keys(aiRooms).find(rid =>
+    aiRooms[rid].conn && aiRooms[rid].conn.socket === conn.socket);
+  if (existingRoomId) {
+    const room = aiRooms[existingRoomId];
+    if (room.gameLoopInterval) {
+      clearInterval(room.gameLoopInterval);
+    }
+    if (room.conn) {
+      room.conn.socket.close();
+    }
+    delete aiRooms[roomId];
+  } */
+  let roomId;
   roomId = uuidv4();
   aiRooms[roomId] = { conn: conn, connected: true, gameStarted: false, game: createGame(), lastActive: Date.now() };
-  room = aiRooms[roomId];
   conn.socket.send(JSON.stringify({ type: 'waiting_ready', roomId }));
 }
 
@@ -375,10 +432,34 @@ async function aiStart(roomId, conn, paddle) {
 
 
 async function handleLocal(conn) {
-  let roomId, room;
+  /*
+  let existingRoomId = Object.keys(localRooms).find(rid =>
+    localRooms[rid].conn && localRooms[rid].conn.socket === conn.socket);
+  if (existingRoomId) {
+    const room = localRooms[existingRoomId];
+    if (room.gameLoopInterval) {
+      clearInterval(room.gameLoopInterval);
+    }
+    if (room.conn) {
+      room.conn.socket.close();
+    }
+    delete localRooms[roomId];
+  }
+  existingRoomId = Object.keys(aiRooms).find(rid =>
+    aiRooms[rid].conn && aiRooms[rid].conn.socket === conn.socket);
+  if (existingRoomId) {
+    const room = aiRooms[existingRoomId];
+    if (room.gameLoopInterval) {
+      clearInterval(room.gameLoopInterval);
+    }
+    if (room.conn) {
+      room.conn.socket.close();
+    }
+    delete aiRooms[roomId];
+  } */
+  let roomId;
   roomId = uuidv4();
   localRooms[roomId] = { conn: conn, connected: true, gameStarted: false, game: createGame(), lastActive: Date.now() };
-  room = localRooms[roomId];
   conn.socket.send(JSON.stringify({ type: 'waiting_ready', roomId }));
 }
 

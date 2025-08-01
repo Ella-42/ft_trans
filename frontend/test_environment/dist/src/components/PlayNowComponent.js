@@ -13,8 +13,11 @@ export const attachPlayNowPong = async () => {
     let downListener = null;
     let upListener = null;
     window.pongClean = function clean() {
-        //window.removeEventListener('keydown', downListener);
-        //window.removeEventListener('keyup', upListener);
+        window.removeEventListener('keydown', downListener);
+        window.removeEventListener('keyup', upListener);
+        if (keyInt) {
+            clearInterval(keyInt);
+        }
         if (socket) {
             socket.onclose = null;
             socket.onmessage = null;
@@ -95,7 +98,7 @@ export const attachPlayNowPong = async () => {
     }
     // local game
     function connect() {
-        socket = new WebSocket(`wss://${location.hostname}/ws`);
+        socket = new WebSocket(`wss://${location.hostname}/ws/local`);
         socket.onopen = () => {
             if (roomId == null) {
                 document.getElementById('status').innerHTML = `
@@ -202,7 +205,7 @@ export const attachPlayNowPong = async () => {
     }
     // Ai Game
     function connectAi() {
-        socket = new WebSocket(`wss://${location.hostname}/ws`);
+        socket = new WebSocket(`wss://${location.hostname}/ws/ai`);
         socket.onopen = () => {
             if (roomId == null) {
                 document.getElementById('status').innerHTML = `
