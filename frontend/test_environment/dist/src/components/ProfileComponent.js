@@ -1,7 +1,7 @@
 import { togglePassword, provideUserFeedback } from '../tools/helper.js';
 import { updateHeaderInNavbar } from '../tools/helper.js';
 export const attachUpdateProfileFormListener = async () => {
-    setTimeout(() => updateHeaderInNavbar("Profile"), 50);
+    updateHeaderInNavbar("Profile");
     const twoFactorToggle = document.querySelector('#twoFactorToggle');
     const updateProfileForm = document.querySelector('#updateProfileForm');
     const showOldPasswordIcon = document.querySelector('.lucide-eye-icon');

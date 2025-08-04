@@ -77,13 +77,9 @@ export const router = async () => {
         		const innerContent = dashboardRoutes[path];
         		if (innerContent) {
           			document.getElementById("dashboard-content").innerHTML = innerContent(user);
-				if (path === "/safe/dashboard/profile")
+				if (path === "/safe/dashboard")
 				{
-					attachUpdateProfileFormListener();
-				}
-				else if (path === "/safe/dashboard/stats")
-				{
-					attachStatsListener();
+					//attachDashboardListener();
 				}
 				else if (path === "/safe/dashboard/play")
 				{
@@ -92,6 +88,18 @@ export const router = async () => {
 				else if (path === "/safe/dashboard/matchmaking")
 				{
 					attachMatchmakingPong();
+				}
+				else if (path === "/safe/dashboard/tournament")
+				{
+					//attachTournamentPong();
+				}
+				else if (path === "/safe/dashboard/profile")
+				{
+					attachUpdateProfileFormListener();
+				}
+				else if (path === "/safe/dashboard/stats")
+				{
+					attachStatsListener();
 				}
 				else if (path === "/safe/dashboard/friends")
 				{

@@ -44,7 +44,7 @@ export const provideUserFeedback = (response) => {
 }
 
 export const updateHeaderInNavbar = (title: string) => {
-	const dashboardTitle = document.querySelector("#dashboard-title");
+	let dashboardTitle: HTMLHeadingElement;
+	while (!dashboardTitle) dashboardTitle = document.querySelector("#dashboard-title");
 	dashboardTitle.textContent=title;
 }
-

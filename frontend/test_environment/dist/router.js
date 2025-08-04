@@ -63,17 +63,23 @@ export const router = async () => {
                 const innerContent = dashboardRoutes[path];
                 if (innerContent) {
                     document.getElementById("dashboard-content").innerHTML = innerContent(user);
-                    if (path === "/safe/dashboard/profile") {
-                        attachUpdateProfileFormListener();
-                    }
-                    else if (path === "/safe/dashboard/stats") {
-                        attachStatsListener();
+                    if (path === "/safe/dashboard") {
+                        //attachDashboardListener();
                     }
                     else if (path === "/safe/dashboard/play") {
                         attachPlayNowPong();
                     }
                     else if (path === "/safe/dashboard/matchmaking") {
                         attachMatchmakingPong();
+                    }
+                    else if (path === "/safe/dashboard/tournament") {
+                        //attachTournamentPong();
+                    }
+                    else if (path === "/safe/dashboard/profile") {
+                        attachUpdateProfileFormListener();
+                    }
+                    else if (path === "/safe/dashboard/stats") {
+                        attachStatsListener();
                     }
                     else if (path === "/safe/dashboard/friends") {
                         attachFriendsListener();

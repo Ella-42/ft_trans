@@ -1,4 +1,6 @@
+import { updateHeaderInNavbar } from '../tools/helper.js';
 export const attachMatchmakingPong = async () => {
+    updateHeaderInNavbar("Pong");
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     let socket = null;

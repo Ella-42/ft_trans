@@ -1,7 +1,7 @@
 import { updateHeaderInNavbar } from '../tools/helper.js';
 export const attachFriendsListener = async () => {
     console.log("The attachFriendsListener runs");
-    setTimeout(() => updateHeaderInNavbar("Friends"), 50);
+    updateHeaderInNavbar("Friends");
     try {
         const idResponse = await axios.get('https://trans.ella-peeters.me/api/whoami');
         const userId = idResponse.data.id;

@@ -4,7 +4,7 @@ declare const axios: any;
 declare const Swal: any;
 
 export const attachUpdateProfileFormListener = async () => {
-	setTimeout(() => updateHeaderInNavbar("Profile"),50);
+	updateHeaderInNavbar("Profile");
 	const twoFactorToggle = document.querySelector<HTMLInputElement>('#twoFactorToggle');
 	const updateProfileForm = document.querySelector('#updateProfileForm');
 	const showOldPasswordIcon = document.querySelector('.lucide-eye-icon');

@@ -5,7 +5,7 @@ declare const axios: any;
 export const attachStatsListener= async () => {
 	console.log("The attachStatsListener runs");
 
-	setTimeout(() => updateHeaderInNavbar("Statistics"),50);
+	updateHeaderInNavbar("Statistics");
 
 	try {
 		const idResponse = await axios.get('https://trans.ella-peeters.me/api/whoami');

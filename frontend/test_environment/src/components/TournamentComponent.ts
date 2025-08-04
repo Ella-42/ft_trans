@@ -1,4 +1,5 @@
 import { User } from '../interfaces/user';
+import { updateHeaderInNavbar } from '../tools/helper.js';
 declare const axios: any;
 
 export const renderTournament = () => {
