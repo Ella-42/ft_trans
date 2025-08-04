@@ -1,4 +1,6 @@
+import { updateHeaderInNavbar } from '../tools/helper.js';
 export const attachMatchmakingPong = async () => {
+    updateHeaderInNavbar("Pong");
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     let socket = null;
@@ -143,7 +145,7 @@ export const attachMatchmakingPong = async () => {
                 gameOver = false;
                 started = true;
                 if (!keyInt) {
-                  keyInt = setInterval(handleInput, 1000 / 30);
+                    keyInt = setInterval(handleInput, 1000 / 30);
                 }
                 document.getElementById('status').textContent = `Reconnected to room ${msg.roomId}`;
             }

@@ -1,5 +1,7 @@
 import { togglePassword, provideUserFeedback } from '../tools/helper.js';
+import { updateHeaderInNavbar } from '../tools/helper.js';
 export const attachUpdateProfileFormListener = async () => {
+    updateHeaderInNavbar("Profile");
     const twoFactorToggle = document.querySelector('#twoFactorToggle');
     const updateProfileForm = document.querySelector('#updateProfileForm');
     const showOldPasswordIcon = document.querySelector('.lucide-eye-icon');
@@ -36,8 +38,30 @@ export const attachUpdateProfileFormListener = async () => {
     });
     const deleteProfileButton = document.querySelector("#deleteProfileButton");
     deleteProfileButton.addEventListener('click', async (e) => {
-        e.preventDefault();
-        console.log("The button to delete the profile has been clicked!");
+        if (deleteProfileButton) {
+            const confirmed = confirm("Are you sure you want to delete your profile? This action cannot be undone.");
+            const token = localStorage.getItem('token');
+            if (!token)
+                return;
+            if (confirmed) {
+                try {
+                    const deleteResponse = await axios.delete(`https://trans.ella-peeters.me/api/users/${response.data.id}`, {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    });
+                    sessionStorage.clear();
+                    window.location.href = '/safe';
+                }
+                catch (error) {
+                    Swal.fire({
+                        title: "Error",
+                        text: "There was an error deleting your account. Try again later!",
+                        icon: "error"
+                    });
+                }
+            }
+        }
     });
     const updateProfileButton = document.querySelector('#updateProfileButton');
     updateProfileButton.addEventListener('click', async (e) => {
@@ -60,14 +84,6 @@ export const attachUpdateProfileFormListener = async () => {
             body.password = newPasswordInput.value;
         if (oldPasswordInput?.value)
             body.oldPassword = oldPasswordInput.value;
-        if (Object.keys(body).length === 0) {
-            Swal.fire({
-                title: 'Oops!',
-                text: "All fields empty",
-                icon: 'error',
-            });
-            return;
-        }
         const res = await fetch(`https://trans.ella-peeters.me/api/users/${response.data.id}`, {
             method: 'PUT',
             credentials: 'include',
@@ -82,8 +98,10 @@ export const renderProfile = () => {
     return `
 				<div class="px-5 flex flex-col md:flex-col flex-1">
 					<div class="px-10 py-5 rounded-xl my-5 mb-10 bg-gray-900 flex flex-col justify-between ">
-						<p class="text-xl mb-8" id="">Edit your profile and account settings.</p>
-
+						<div>
+							<h1 class="text-3xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Profile</h1>
+							<p className="text-slate-400">Edit your profile and account settings</p>
+						</div>
 						<p class="text-xl mt-10 mb-4">Settings</p>
 						<p class="mt-10 mb-2">Two-Factor Authentication</p>
 						<div class="flex items-center gap-4 mb-8">

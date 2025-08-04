@@ -10,7 +10,8 @@ import { renderProfile, attachUpdateProfileFormListener } from './src/components
 import { renderPlayNow, attachPlayNowPong } from './src/components/PlayNowComponent.js';
 import { renderMatchmaking, attachMatchmakingPong } from './src/components/MatchmakingComponent.js';
 import { renderTournament } from './src/components/TournamentComponent.js';
-import { renderStats } from './src/components/StatsComponent.js';
+import { attachStatsListener } from './src/components/StatsComponent.js';
+import { attachFriendsListener } from './src/components/FriendsComponent.js';
 const routes = {
     "/safe": renderHomePage,
     "/safe/login": renderLogin,
@@ -25,7 +26,8 @@ const dashboardRoutes = {
     "/safe/dashboard/matchmaking": () => renderMatchmaking(),
     "/safe/dashboard/tournament": () => renderTournament(),
     "/safe/dashboard/profile": () => renderProfile(),
-    "/safe/dashboard/stats": () => renderStats(),
+    "/safe/dashboard/stats": () => "",
+    "/safe/dashboard/friends": () => "",
 };
 export const navigateTo = (url) => {
     window.pongClean?.();
@@ -61,14 +63,26 @@ export const router = async () => {
                 const innerContent = dashboardRoutes[path];
                 if (innerContent) {
                     document.getElementById("dashboard-content").innerHTML = innerContent(user);
-                    if (path === "/safe/dashboard/profile") {
-                        attachUpdateProfileFormListener();
+                    if (path === "/safe/dashboard") {
+                        //attachDashboardListener();
                     }
                     else if (path === "/safe/dashboard/play") {
                         attachPlayNowPong();
                     }
                     else if (path === "/safe/dashboard/matchmaking") {
                         attachMatchmakingPong();
+                    }
+                    else if (path === "/safe/dashboard/tournament") {
+                        //attachTournamentPong();
+                    }
+                    else if (path === "/safe/dashboard/profile") {
+                        attachUpdateProfileFormListener();
+                    }
+                    else if (path === "/safe/dashboard/stats") {
+                        attachStatsListener();
+                    }
+                    else if (path === "/safe/dashboard/friends") {
+                        attachFriendsListener();
                     }
                 }
                 else {
@@ -86,7 +100,7 @@ export const router = async () => {
     //setTimeout(attachMenuListener, 0);
     //setTimeout(attachRegisterFormListener, 0);
     const page = routes[path] ? routes[path]() : "<h1>404 - Page Not Found</h1>";
-    app.innerHTML = page;
+    app.innerHTML = await page;
     attachMenuListener();
     if (path === "/safe/register")
         attachRegisterFormListener();

@@ -1,4 +1,4 @@
-export function renderNavBar(): string {
+export function renderNavBar(isLoggedIn: boolean): string {
 
 	const navbarHTML = `
 		<nav class="bg-primary-background" >
@@ -14,14 +14,12 @@ export function renderNavBar(): string {
 				<div class="hidden flex md:flex md:flex-row flex-col items-center justify-start pb-5 md:space-x-5 pb-3 md:pb-0 navigation-menu">
 					<a data-link href="/safe#home" class="text-base md:text-base py-1 px-3 block text-white hover:text-gray-400">Home</a>
 					<a data-link href="/safe#features" class="text-base md:text-base py-1 px-3 block text-white hover:text-gray-400">Features</a>
-					<a data-link href="/safe/dashboard" class="text-base md:text-base py-1 px-3 block text-white hover:text-gray-400">Dashboard</a>
-					<a data-link href="/safe/login" data-link>
-						<button type="button" class="text-base md:text-base text-white bg-primary my-3 py-2 px-4 rounded-md flex items-center whitespace-nowrap hover:text-primary hover:bg-white">
-								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-2">
-  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15M12 9l3 3m0 0-3 3m3-3H2.25" />
-								</svg>
-							Log in</button>
-						</a>
+					${isLoggedIn ? `<a data-link href="/safe/dashboard" class="text-base md:text-base py-1 px-3 block text-white hover:text-gray-400">Dashboard</a>` : ``
+					}
+					${isLoggedIn
+						? ``
+						: `<a data-link href="/safe/login"><button class="text-white bg-primary px-4 py-2 rounded hover:bg-white hover:text-primary">Log in</button></a>`
+					}
 				</div>
 			</div>
 		</nav>

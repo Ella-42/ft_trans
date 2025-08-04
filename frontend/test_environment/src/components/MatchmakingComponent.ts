@@ -1,7 +1,9 @@
 import { User } from '../interfaces/user';
+import { updateHeaderInNavbar } from '../tools/helper.js';
 declare const axios: any;
 
 export const attachMatchmakingPong = async () => {
+	updateHeaderInNavbar("Pong");
     const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d');
     let socket = null;

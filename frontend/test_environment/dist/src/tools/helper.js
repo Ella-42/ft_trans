@@ -31,3 +31,9 @@ export const provideUserFeedback = (response) => {
         });
     }
 };
+export const updateHeaderInNavbar = (title) => {
+    let dashboardTitle;
+    while (!dashboardTitle)
+        dashboardTitle = document.querySelector("#dashboard-title");
+    dashboardTitle.textContent = title;
+};
