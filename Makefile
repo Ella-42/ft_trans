@@ -6,16 +6,28 @@
 #    By: lpeeters <lpeeters@student.s19.be>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/04 21:07:01 by lpeeters          #+#    #+#              #
-#    Updated: 2025/07/31 21:48:46 by lpeeters         ###   ########.fr        #
+#    Updated: 2025/08/05 17:31:34 by lpeeters         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
+
+# List of container names
+containers = nginx authenticator mailserver database websocket
+
+# Expand name parameter to filter argument
+define nameFilter
+--filter "name=$1"
+endef
+
+# Filter status and cleanup by project name
+statusFilter = $(foreach name, $(containers), $(call nameFilter, $(name)))
+cleanFilter = --filter "label=com.docker.compose.project=ft_trans"
 
 # Silence error output
 silent = 2> /dev/null
 
-# Build and launch the Docker stack
+# Name, build and launch the Docker stack
 up:
-	@docker-compose up --build -d
+	@docker-compose -p ft_trans up --build -d
 
 # Stop the Docker stack
 down:
@@ -23,7 +35,7 @@ down:
 
 # Check Docker stack status
 status:
-	@docker ps -a
+	@docker ps -a $(statusFilter)
 
 # Shell into the Nginx Docker container
 nginx:
@@ -47,11 +59,11 @@ websocket:
 
 # Remove all Docker containers, images, volumes and networks
 clean:
-	@docker stop $$(docker ps -qa) $(silent); \
-	 docker rm $$(docker ps -qa) $(silent); \
-	 docker rmi -f $$(docker images -qa) $(silent); \
-	 docker volume rm $$(docker volume ls -q) $(silent); \
-	 docker network rm $$(docker network ls -q) $(silent) || true
+	@docker stop $$(docker ps -qa $(cleanFilter)) $(silent); \
+	 docker rm $$(docker ps -qa $(cleanFilter)) $(silent); \
+	 docker rmi -f $$(docker images -qa $(cleanFilter)) $(silent); \
+	 docker volume rm $$(docker volume ls -q $(cleanFilter)) $(silent); \
+	 docker network rm $$(docker network ls -q $(cleanFilter)) $(silent) || true
 
 # Display logs for various services
 log:
