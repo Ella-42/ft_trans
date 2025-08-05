@@ -269,8 +269,27 @@ fastify.get('/api/users/:id', async (request, reply) => {
         if (!user) return reply.status(404).send({ error: 'User not found' });
         reply.send(user);
     } catch (err) {
-        reply.status(500).send({ error: 'Failed to fetch users' });
+        reply.status(500).send({ error: 'Failed to fetch user' });
     }
+});
+
+// **2.1 Fetch user by nickname search**
+fastify.get('/api/users/:id/search', { preHandler: verifyToken }, async (request, reply) => {
+	const { id } = request.params;
+	if (parseInt(id) !== request.user.id)
+		return reply.status(403).send({ error: 'Forbidden: You will have to log in to search for friends to add' });
+	const query = request.query.q;
+	if (typeof query !== 'string')
+		return reply.status(400).send({ error: 'Invalid query format, has to be string' });
+	if (query.length < 3)
+		return reply.status(400).send({ error: 'Invalid query length, has to be at least 3 characters' });
+
+	try {
+		return await dbAll(`SELECT id, nickname, avatar FROM users WHERE LOWER(nickname) LIKE LOWER(?) LIMIT 25`, [`%${query}%`]);
+	} catch (error) {
+		console.error(error);
+		return reply.status(500).send({ error: 'Failed to fetch user(s)' });
+	}
 });
 
 function isEmptyOrNull(str) {
@@ -279,11 +298,11 @@ function isEmptyOrNull(str) {
 
 const hash = async variable => {
 	return await bcrypt.hash(variable, 11);
-}
+};
 
 const hmacHash = variable => {
 	return crypto.createHmac('sha256', hmac).update(variable).digest('hex');
-}
+};
 
 // **3. Add new user**
 fastify.post('/api/register', async (request, reply) => {

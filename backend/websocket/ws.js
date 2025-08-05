@@ -232,7 +232,7 @@ const FRAME_RATE = 1000 / 60;
 const GAME_WIDTH = 500;
 const GAME_HEIGHT = 500;
 const BALL_RADIUS = 12.5;
-const PADDLE_SPEED = 20;
+const PADDLE_SPEED = 18;
 
 function createGame() {
     let ballSpeed = 3; // if level needs to be implemented, this variable should be changed
@@ -240,7 +240,7 @@ function createGame() {
     let ballYDirection;
     do {
       ballYDirection = (Math.random() - 0.5) * 2; // range: [-1, 1]
-    } while (Math.abs(ballYDirection) < 0.15); // avoid almost horizontal direction
+    } while (Math.abs(ballYDirection) < 0.2); // avoid almost horizontal direction
 
     return {
         ballX: GAME_WIDTH / 2,
@@ -305,7 +305,7 @@ function updateGame(game) {
 
 function updateAi(game, playerPaddle) {
   const aiPaddle = playerPaddle === 1 ? game.paddle2 : game.paddle1;
-  const aiSpeed = 4;
+  const aiSpeed = 9;
 
   if (!game.aiReactionTime) game.aiReactionTime = Date.now();
   if (!game.aiHasStartedMoving && Math.abs(aiPaddle.y + aiPaddle.height / 2 - game.ballY) > 10) {
@@ -314,7 +314,7 @@ function updateAi(game, playerPaddle) {
   }
 
   const now = Date.now();
-  const delay = 250; // 250 milliseconds is average human reaction time, for fair competition
+  const delay = 284; // 284 milliseconds is average human reaction time, for fair competition
 
   if (game.aiHasStartedMoving && now - game.aiReactionTime >= delay) {
     if (aiPaddle.y + aiPaddle.height / 2 > game.ballY && aiPaddle.y > 0) {
