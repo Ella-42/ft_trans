@@ -1,46 +1,50 @@
 import { updateHeaderInNavbar } from '../tools/helper.js';
+function attachInputListener(userId, userArray, getSearchText, setSearchText) {
+    let debounceTimeout = null;
+    const inputField = document.querySelector("#searchInput");
+    if (!inputField)
+        return;
+    inputField.addEventListener("input", (event) => {
+        const target = event.target;
+        const searchText = target.value;
+        setSearchText(searchText);
+        if (debounceTimeout)
+            clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(async () => {
+            let results = [];
+            if (searchText.length >= 3) {
+                try {
+                    const response = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/search`, {
+                        params: { q: searchText },
+                    });
+                    results = response.data;
+                }
+                catch (error) {
+                    console.error("Search failed:", error);
+                }
+            }
+            const container = document.getElementById("dashboard-content");
+            if (container) {
+                container.innerHTML = renderFriends(results, searchText);
+            }
+            attachInputListener(userId, results, getSearchText, setSearchText);
+        }, 500);
+    });
+}
 export const attachFriendsListener = async () => {
     console.log("The attachFriendsListener runs");
     updateHeaderInNavbar("Friends");
     try {
         const idResponse = await axios.get('https://trans.ella-peeters.me/api/whoami');
         const userId = idResponse.data.id;
-        const friendsResponse = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/friends`);
-        console.log("The friends response is: ", friendsResponse);
+        let searchText = '';
         let userArray = [];
+        const getSearchText = () => searchText;
+        const setSearchText = (val) => { searchText = val; };
         const container = document.getElementById("dashboard-content");
         if (container) {
-            container.innerHTML = renderFriends(userArray);
-        }
-        let debounceTimeout = null;
-        const inputField = document.querySelector("#searchInput");
-        if (inputField) {
-            inputField.addEventListener("input", (event) => {
-                const target = event.target;
-                const value = target.value;
-                console.log("User is typing:", value);
-                if (debounceTimeout) {
-                    clearTimeout(debounceTimeout);
-                }
-                debounceTimeout = setTimeout(async () => {
-                    if (value.length >= 3) {
-                        try {
-                            const response = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/search`, {
-                                params: { q: value },
-                            });
-                            console.log("Search results:", response.data);
-                            userArray = response.data;
-                            const container = document.getElementById("dashboard-content");
-                            if (container) {
-                                container.innerHTML = renderFriends(userArray);
-                            }
-                        }
-                        catch (error) {
-                            console.error("Error fetching users:", error);
-                        }
-                    }
-                }, 1000);
-            });
+            container.innerHTML = renderFriends(userArray, searchText);
+            attachInputListener(userId, userArray, getSearchText, setSearchText);
         }
     }
     catch (error) {
@@ -51,7 +55,7 @@ export const attachFriendsListener = async () => {
         }
     }
 };
-export const renderFriends = (userArray) => {
+export const renderFriends = (userArray, searchText = '') => {
     return `
 				<div class="px-5 flex flex-col md:flex-col flex-1">
 					<div class="px-10 py-5 rounded-xl my-5 mb-10 bg-gray-900 flex flex-col justify-between">
@@ -80,20 +84,24 @@ export const renderFriends = (userArray) => {
 							<input
 								id="searchInput"
   								type="text"
+								value="${searchText}"
   								placeholder="Search for a player by typing at least 3 characters of a nickname..."
   								class="w-full px-4 py-2 bg-slate-600 text-white placeholder-slate-400 placeholder:text-sm rounded-md border border-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
 							/>
 
 							<div>
   								${userArray.length > 0 ? `
-    									<div class="grid grid-cols-1 gap-4 mt-4 items-center">
+    									<div class="grid grid-cols-1 gap-4 mt-6 items-center">
       										${userArray.map(user => `
         										<div class="flex bg-slate-600 border border-slate-400 rounded-md py-4 px-8 flex justify-between items-center">
 												<div class="flex flex-row items-center">
 													<img src=${user.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.nickname) + '&background=000000&color=ffffff&bold=true'} class="h-10"></img>
          												<p class="font-semibold text-white text-m ml-3 truncate max-w-[180px]">${user.nickname}</p>
 												</div>
-												<button>Profile</button>
+												<div class="flex flex-row gap-6 items-center">
+													<button class="bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all rounded-md py-1 px-3">Add friend</button>
+													<a href="#" class="text-slate-400 hover:text-white hover:bg-slate-700 px-2 py-1 text-xs">View profile</a>
+												</div>
         										</div>
       										`).join('')}
     									</div>
