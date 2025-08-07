@@ -25,17 +25,28 @@ function attachInputListener(userId, userArray, getSearchText, setSearchText) {
             if (container) {
                 container.innerHTML = renderFriends(results, searchText, userId);
                 attachInputListener(userId, results, getSearchText, setSearchText);
-                attachFriendsRequestListener();
+                attachFriendsRequestListener(userId);
             }
         }
     });
 }
-const attachFriendsRequestListener = async () => {
+const attachFriendsRequestListener = async (userId) => {
     console.log("The friendsRequestListener runs");
     try {
         const friendRequestButtons = document.querySelectorAll("#sendFriendRequestButton");
         friendRequestButtons.forEach(button => {
-            console.log("The button to send friend request is: ", button);
+            button.addEventListener("click", async () => {
+                try {
+                    const friendId = button.getAttribute("friendId");
+                    const friendAddResponse = await axios.put(`https://trans.ella-peeters.me/api/users/${userId}/friends/requests`, {
+                        friendId
+                    });
+                    console.log("The response after adding a new friend: ", friendAddResponse);
+                }
+                catch (error) {
+                    console.log(error);
+                }
+            });
         });
     }
     catch (error) {
@@ -59,7 +70,7 @@ export const attachFriendsListener = async () => {
         if (container) {
             container.innerHTML = renderFriends(userArray, searchText, userId);
             attachInputListener(userId, userArray, getSearchText, setSearchText);
-            attachFriendsRequestListener();
+            attachFriendsRequestListener(userId);
         }
     }
     catch (error) {
@@ -115,7 +126,7 @@ export const renderFriends = (userArray, searchText = '', userId) => {
 												</div>
 												<div class="flex flex-row gap-6 items-center">
 													${userId !== user.id ? `
-													<button id="sendFriendRequestButton" class="bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all rounded-md py-1 px-3">Add friend</button>` : `<p class="text-slate-400 px-2 py-1 text-xs">You cannot add yourself</p>`} 
+													<button id="sendFriendRequestButton" class="bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all rounded-md py-1 px-3" friendId=${user.id}>Add friend</button>` : `<p class="text-slate-400 px-2 py-1 text-xs">You cannot add yourself</p>`} 
 													${userId !== user.id ? `
 													<a href="#" class="text-slate-400 hover:text-white hover:bg-slate-700 px-2 py-1 text-xs">View profile</a>` : ``} 
 												</div>
