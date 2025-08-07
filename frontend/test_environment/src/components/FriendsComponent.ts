@@ -3,23 +3,20 @@ import { updateHeaderInNavbar } from '../tools/helper.js';
 declare const axios: any;
 
 function attachInputListener(userId: number, userArray: Array<any>, getSearchText: () => string, setSearchText: (val: string) => void) {
-	let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
 	const inputField = document.querySelector("#searchInput");
 
 	if (!inputField) return;
 
-	inputField.addEventListener("input", (event) => {
+	inputField.addEventListener("keydown", async (event: KeyboardEvent) => {
 		const target = event.target as HTMLInputElement;
-		const searchText = target.value;
-		setSearchText(searchText);
 
-		if (debounceTimeout) clearTimeout(debounceTimeout);
-
-		debounceTimeout = setTimeout(async () => {
+		if (event.key === "Enter") {
+			const searchText = target.value;
+			setSearchText(searchText);
 			let results: Array<any> = [];
 			if (searchText.length >= 3) {
 				try {
-					const response = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/search`, {
+					const response = await axios.get(`https://trans.ella-peeters.me/api/users/search`, {
 						params: { q: searchText },
 					});
 					results = response.data;
@@ -28,13 +25,29 @@ function attachInputListener(userId: number, userArray: Array<any>, getSearchTex
 				}
 			}
 
+			console.log("The results are: ", results);
 			const container = document.getElementById("dashboard-content");
 			if (container) {
-				container.innerHTML = renderFriends(results, searchText);
+				container.innerHTML = renderFriends(results, searchText, userId);
+				attachInputListener(userId, results, getSearchText, setSearchText);
+				attachFriendsRequestListener();
 			}
-			attachInputListener(userId, results, getSearchText, setSearchText);
-		}, 500);
+		}
 	});
+}
+
+const attachFriendsRequestListener = async () => {
+	console.log("The friendsRequestListener runs");
+
+	try {
+		const friendRequestButtons = document.querySelectorAll("#sendFriendRequestButton");
+		friendRequestButtons.forEach(button => {
+			console.log("The button to send friend request is: ", button);
+		})
+
+	} catch (error) {
+	
+	}
 }
 
 export const attachFriendsListener = async () => {
@@ -45,6 +58,10 @@ export const attachFriendsListener = async () => {
 	try {
 		const idResponse = await axios.get('https://trans.ella-peeters.me/api/whoami');
 		const userId = idResponse.data.id;
+		console.log("The user id is: ", userId);
+		const friendsListResponse = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/friends`);
+		const friendsList = friendsListResponse.data;
+		console.log("The friendslist is: ", friendsList);
 
 		let searchText = '';
 		let userArray: Array<{ avatar: string, id: number, nickname: string }> = [];
@@ -54,8 +71,9 @@ export const attachFriendsListener = async () => {
 
 		const container = document.getElementById("dashboard-content");
 		if (container) {
-			container.innerHTML = renderFriends(userArray, searchText);
+			container.innerHTML = renderFriends(userArray, searchText, userId);
 			attachInputListener(userId, userArray, getSearchText, setSearchText);
+			attachFriendsRequestListener();
 		}
 	} catch (error) {
 		console.error("The error is: ", error);
@@ -66,7 +84,7 @@ export const attachFriendsListener = async () => {
 	}
 };
 
-export const renderFriends = (userArray: Array<{avatar: string, id: number, nickname: string}>, searchText: string = '') => {
+export const renderFriends = (userArray: Array<{avatar: string, id: number, nickname: string}>, searchText: string = '', userId: number) => {
 	return `
 				<div class="px-5 flex flex-col md:flex-col flex-1">
 					<div class="px-10 py-5 rounded-xl my-5 mb-10 bg-gray-900 flex flex-col justify-between">
@@ -96,7 +114,7 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
 								id="searchInput"
   								type="text"
 								value="${searchText}"
-  								placeholder="Search for a player by typing at least 3 characters of a nickname..."
+  								placeholder="Search for a player by typing at least 3 characters of a nickname and press enter..."
   								class="w-full px-4 py-2 bg-slate-600 text-white placeholder-slate-400 placeholder:text-sm rounded-md border border-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
 							/>
 
@@ -110,8 +128,10 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
          												<p class="font-semibold text-white text-m ml-3 truncate max-w-[180px]">${user.nickname}</p>
 												</div>
 												<div class="flex flex-row gap-6 items-center">
-													<button class="bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all rounded-md py-1 px-3">Add friend</button>
-													<a href="#" class="text-slate-400 hover:text-white hover:bg-slate-700 px-2 py-1 text-xs">View profile</a>
+													${userId !== user.id ? `
+													<button id="sendFriendRequestButton" class="bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all rounded-md py-1 px-3">Add friend</button>` : `<p class="text-slate-400 px-2 py-1 text-xs">You cannot add yourself</p>`} 
+													${userId !== user.id ? `
+													<a href="#" class="text-slate-400 hover:text-white hover:bg-slate-700 px-2 py-1 text-xs">View profile</a>`: ``} 
 												</div>
         										</div>
       										`).join('')}
@@ -125,6 +145,10 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
 							</div>
 
 
+
+						</div>
+						<div class="mb-4 px-8 py-4 bg-slate-800 rounded-md border border-slate-700">
+							<h1 class="text-xl mb-4">Friends list</h1>
 
 						</div>
 					</div>	
