@@ -46,12 +46,13 @@ db.serialize(() => {
             email TEXT NOT NULL UNIQUE,
             verified INT DEFAULT FALSE,
             two_factor INT DEFAULT FALSE,
+            friend_requests TEXT DEFAULT '[]',
             friends TEXT DEFAULT '[]',
-            blocked TEXT DEFAULT '[]',
             pong_wins INT DEFAULT 0,
             pong_losses INT DEFAULT 0,
             pong_tournament_wins INT DEFAULT 0,
-            avatar TEXT DEFAULT NULL
+            avatar TEXT DEFAULT NULL,
+            active INT DEFAULT NULL
         );
 
         CREATE TABLE IF NOT EXISTS matches (
@@ -224,7 +225,7 @@ function checkLoginInStatus(request, reply, done) {
 
 fastify.get('/api/users/verifytoken', { preHandler: verifyToken }, async (request, reply) => {
     try { 
-        const user = await dbGet('SELECT id, nickname FROM users WHERE id = ?', [request.user.id]);
+        const user = await dbGet('SELECT id, nickname, avatar FROM users WHERE id = ?', [request.user.id]);
         if (!user) return reply.status(401).send({ error: 'Unauthorized: User not found' });
         reply.status(200).send({ message: 'OK', id: user.id, nickname: user.nickname, avatar: user.avatar });
         return ;
@@ -251,21 +252,38 @@ fastify.get('/api/update', { preHandler: decode }, async (request, reply) => {
 	autoClose('Email updated', reply);
 });
 
-// **1. Fetch all users**
-fastify.get('/api/users', { preHandler: verifyToken }, async (request, reply) => {
-    try {
-        const users = await dbAll('SELECT id, nickname FROM users');
-        reply.send(users);
-    } catch (err) {
-        reply.status(500).send({ error: 'Failed to fetch users' });
-    }
+// **1. Fetch user by search for nickname**
+fastify.get('/api/users/search', { preHandler: verifyToken }, async (request, reply) => {
+	const query = request.query.q;
+	if (typeof query !== 'string')
+		return reply.status(400).send({ error: 'Invalid query format, has to be string' });
+	if (query.length <= 3)
+		return reply.status(400).send({ error: 'Invalid query length, has to be at least 3 characters' });
+
+	try {
+		return await dbAll(`SELECT id, nickname, avatar FROM users WHERE LOWER(nickname) LIKE LOWER(?) LIMIT 25`, [`%${query}%`]);
+	} catch {
+		return reply.status(500).send({ error: 'Failed to fetch user(s)' });
+	}
+});
+
+// **1.1 Fetch all users**
+internalFastify.get('/api/users', async (request, reply) => {
+	try {
+		reply.send(await dbAll('SELECT id, nickname, avatar FROM users'));
+	} catch (err) {
+		reply.status(500).send({ error: 'Failed to fetch users' });
+	}
 });
 
 // **2. Fetch user by ID**
-fastify.get('/api/users/:id', async (request, reply) => {
+fastify.get('/api/users/:id', { preHandler: verifyToken }, async (request, reply) => {
     try {
         const { id } = request.params;
-        const user = await dbGet('SELECT id, nickname FROM users WHERE id = ?', [id]);
+		if (parseInt(id) !== request.user.id && !(JSON.parse((await dbGet('SELECT friends FROM users WHERE id = ?', [request.user.id])).friends)).includes(id)) {
+			return reply.status(403).send({ error: "You only have access to your own and your friends' profiles" });
+		}
+        const user = await dbGet('SELECT id, nickname, avatar FROM users WHERE id = ?', [id]);
         if (!user) return reply.status(404).send({ error: 'User not found' });
         reply.send(user);
     } catch (err) {
@@ -273,23 +291,22 @@ fastify.get('/api/users/:id', async (request, reply) => {
     }
 });
 
-// **2.1 Fetch user by nickname search**
-fastify.get('/api/users/:id/search', { preHandler: verifyToken }, async (request, reply) => {
-	const { id } = request.params;
-	if (parseInt(id) !== request.user.id)
-		return reply.status(403).send({ error: 'Forbidden: You will have to log in to search for friends to add' });
-	const query = request.query.q;
-	if (typeof query !== 'string')
-		return reply.status(400).send({ error: 'Invalid query format, has to be string' });
-	if (query.length < 3)
-		return reply.status(400).send({ error: 'Invalid query length, has to be at least 3 characters' });
-
-	try {
-		return await dbAll(`SELECT id, nickname, avatar FROM users WHERE LOWER(nickname) LIKE LOWER(?) LIMIT 25`, [`%${query}%`]);
-	} catch (error) {
-		console.error(error);
-		return reply.status(500).send({ error: 'Failed to fetch user(s)' });
-	}
+// **2.1 Get avatar by ID**
+fastify.get('/api/users/:id/avatar', { preHandler: verifyToken }, async (request, reply) => {
+    try {
+        const { id } = request.params;
+		if (parseInt(id) !== request.user.id && !(JSON.parse((await dbGet('SELECT friends FROM users WHERE id = ?', [request.user.id])).friends)).includes(id)) {
+			return reply.status(403).send({ error: "You only have access to your own and your friends' profiles" });
+		}
+        const row = await dbGet("SELECT avatar FROM users WHERE id = ?", [id]);
+        if (!row) {
+            return reply.status(404).send({ error: "User not found" });
+        }
+        const avatar = row.avatar || "https://42.fr/wp-content/uploads/2021/05/42-Final-sigle-seul.svg";
+        reply.send({avatar: avatar});
+    } catch {
+        reply.status(500).send({ error: 'Failed to retrieve avatar' });
+    }
 });
 
 function isEmptyOrNull(str) {
@@ -413,21 +430,8 @@ fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply
 	}
 });
 
-// **5. Get Avatar**
-fastify.get('/api/users/:id/avatar', async (request, reply) => {
-    try {
-        const { id } = request.params;
-        const row = await dbGet("SELECT avatar FROM users WHERE id = ?", [id]);
-        if (!row) {
-            return reply.status(404).send({ error: "User not found" });
-        }
-        const avatar = row.avatar ? row.avatar : "https://42.fr/wp-content/uploads/2021/05/42-Final-sigle-seul.svg";
-        reply.send({avatar: avatar});
-        return ;
-    } catch (err) {
-        reply.status(500).send({ error: 'Failed to retrieve avatar' });
-    }
-});
+// **5. Update user activity**
+// TODO
 
 // **6. Delete user**
 fastify.delete('/api/users/:id', { preHandler: verifyToken }, async (request, reply) => {
@@ -436,12 +440,22 @@ fastify.delete('/api/users/:id', { preHandler: verifyToken }, async (request, re
         if (parseInt(id) !== request.user.id) {
             return reply.status(403).send({ error: 'Forbidden: You can only delete your own profile' });
         }
-        const result = await dbRun('DELETE FROM users WHERE id = ?', [id]);
-
-        if (result.changes === 0) return reply.status(404).send({ error: 'User not found' });
-
+        await dbRun('DELETE FROM users WHERE id = ?', [id]);
         reply.status(200).send({ message: 'User deleted successfully' });
-    } catch (err) {
+
+		const users = await dbAll('SELECT id, friend_requests, friends FROM users')
+		for (const user of users) {
+			let friendRequests = JSON.parse(user.friend_requests);
+			let friends = JSON.parse(user.friends);
+
+			const cleanFriendRequests = friendRequests.filter(fid => fid !== id);
+			const cleanFriends = friends.filter(fid => fid !== id);
+
+			if (cleanFriendRequests.length !== friendRequests.length || cleanFriends.length !== friends.length) {
+				await dbRun('UPDATE users SET friend_requests = ?, friends = ? WHERE id = ?', [JSON.stringify(cleanFriendRequests), JSON.stringify(cleanFriends), user.id]);
+			}
+		}
+    } catch {
         reply.status(500).send({ error: 'Failed to delete user' });
     }
 });
@@ -512,90 +526,155 @@ fastify.get('/api/users/:id/2fa', { preHandler: verifyToken }, async (request, r
     }
 });
 
-// **8. add friend **
+// **8. send friend request**
+fastify.put('/api/users/:id/friends/requests', { preHandler: verifyToken }, async (request, reply) => {
+    try {
+        const { id } = request.params;
+        if (parseInt(id) !== request.user.id) {
+            return reply.status(403).send({ error: 'Forbidden: You can only modify your own profile' });
+        }
+        const friendId = String(request.body.friendId);
+
+        if (id === friendId) {
+            return reply.status(400).send({ error: 'You cannot send a friend request to yourself' });
+        }
+        const friend = await dbGet('SELECT friend_requests, friends FROM users WHERE id = ?', [friendId]);
+        if (!friend) return reply.status(404).send({ error: 'Friend to add not found' });
+
+        let friendRequests = JSON.parse((await dbGet('SELECT friend_requests FROM users WHERE id = ?', id)).friend_requests);
+        if (friendRequests.includes(friendId)) {
+            return reply.status(403).send({ error: 'Friend already pending for you, please add them instead' });
+        }
+
+        let friends = JSON.parse(friend.friends);
+        if (friends.includes(id)) {
+            return reply.status(200).send({ message: 'Friend already added' });
+        }
+
+        let friendFriendRequests = JSON.parse(friend.friend_requests);
+        if (friendFriendRequests.includes(id)) {
+            return reply.status(200).send({ message: 'Friend request already pending' });
+        }
+        friendFriendRequests.push(id);
+        await dbRun("UPDATE users SET friend_requests = ? WHERE id = ?", [JSON.stringify(friendFriendRequests), friendId]);
+        reply.status(200).send({ message: 'Friend request sent successfully' });
+    } catch {
+        reply.status(500).send({ error: 'Failed to send friend request' });
+    }
+});
+
+// **8.1 add friend**
 fastify.put('/api/users/:id/friends', { preHandler: verifyToken }, async (request, reply) => {
     try {
         const { id } = request.params;
         if (parseInt(id) !== request.user.id) {
             return reply.status(403).send({ error: 'Forbidden: You can only modify your own profile' });
         }
-        const { friendid } = request.body;
+        const friendId = String(request.body.friendId);
 
-        if (id == friendid) {
-            return reply.status(204).send({ message: 'No changes made' });
+        if (id === friendId) {
+            return reply.status(400).send({ error: 'You cannot add yourself as friend' });
         }
-        // Check if user exists before updating
-        const existingUser = await dbGet('SELECT id FROM users WHERE id = ?', [id]);
-        if (!existingUser) return reply.status(404).send({ error: 'User not found' });
+        const user = await dbGet('SELECT friend_requests, friends FROM users WHERE id = ?', [id]);
 
-        const existingfriend = await dbGet('SELECT id FROM users WHERE id = ?', [friendid]);
-        if (!existingfriend) return reply.status(404).send({ error: 'Friend not found' });
+        let friends = JSON.parse(user.friends);
+		if (friends.includes(friendId)) {
+			return reply.status(200).send({ message: 'Already friends' });
+		}
 
-        // Perform the update
-        const row = await dbGet("SELECT friends FROM users WHERE id = ?", [id]);
-        if (!row) {
-            return reply.status(404).send({ error: "User not found" });
+        let friendRequests = JSON.parse(user.friend_requests);
+        if (!friendRequests.includes(friendId)) {
+			return reply.status(400).send({ error: 'Friend has not sent a friend request' });
         }
-        let jsonArray = JSON.parse(row.friends);
-        if (jsonArray.includes(friendid)) {
-            console.log("Friend already on friend list");
-            return reply.status(200).send({ message: 'Friend already on friends list' });
-        }
-        jsonArray.push(friendid);
-        const result = await dbRun("UPDATE users SET friends = ? WHERE id = ?", [JSON.stringify(jsonArray), id]);
-        if (!result.changes) return reply.status(204).send({ message: 'No changes made' });
+
+        friendRequests = friendRequests.filter(id => id !== friendId);
+        friends.push(friendId);
+        await dbRun("UPDATE users SET friend_requests = ?, friends = ? WHERE id = ?", [JSON.stringify(friendRequests), JSON.stringify(friends), id]);
+
+        let friendFriends = JSON.parse((await dbGet('SELECT friends FROM users WHERE id = ?', friendId)).friends);
+        friendFriends.push(id);
+        await dbRun("UPDATE users SET friends = ? WHERE id = ?", [JSON.stringify(friendFriends), friendId]);
         reply.status(200).send({ message: 'Friends list updated successfully' });
-        return ;
-    } catch (err) {
-        reply.status(500).send({ error: 'Failed to update friends list.' });
+    } catch {
+        reply.status(500).send({ error: 'Failed to update friends list' });
     }
 });
 
-// **9. get friends list **
-fastify.get('/api/users/:id/friends', async (request, reply) => {
+// **9. get friend requests list**
+fastify.get('/api/users/:id/friends/requests', { preHandler: verifyToken }, async (request, reply) => {
     try {
         const { id } = request.params;
-        const row = await dbGet("SELECT friends FROM users WHERE id = ?", [id]);
-        if (!row) {
-            return reply.status(404).send({ error: "User not found" });
+        if (parseInt(id) !== request.user.id) {
+            return reply.status(403).send({ error: 'Forbidden: You can only request your own friend requests list' });
         }
-        const friends = JSON.parse(row.friends);
-        reply.send(friends);
-        return ;
-    } catch (err) {
-        reply.status(500).send({ error: 'Failed to retrieve friends list.' });
+        reply.send(JSON.parse((await dbGet("SELECT friend_requests FROM users WHERE id = ?", [id])).friend_requests));
+    } catch {
+        reply.status(500).send({ error: 'Failed to retrieve friend requests list' });
     }
 });
 
-// **10. delete friend from friends list
+// **9.1 get friends list**
+fastify.get('/api/users/:id/friends', { preHandler: verifyToken }, async (request, reply) => {
+    try {
+        const { id } = request.params;
+        if (parseInt(id) !== request.user.id) {
+            return reply.status(403).send({ error: 'Forbidden: You can only request your own friends list' });
+        }
+        reply.send(JSON.parse((await dbGet("SELECT friends FROM users WHERE id = ?", [id])).friends));
+    } catch {
+        reply.status(500).send({ error: 'Failed to retrieve friends list' });
+    }
+});
+
+// **10. delete friend request from friend requests list**
+fastify.delete('/api/users/:id/friends/requests', { preHandler: verifyToken }, async (request, reply) => {
+    try {
+        const { id } = request.params;
+        if (parseInt(id) !== request.user.id) {
+            return reply.status(403).send({ error: 'Forbidden: You can only delete friend requests from your own profile' });
+        }
+        const friendId = String(request.body.friendId);
+        let friendRequests = JSON.parse((await dbGet("SELECT friend_requests FROM users WHERE id = ?", [id])).friend_requests);
+        if (!friendRequests.includes(friendId)) {
+            return reply.status(200).send({ message: 'Friend not on friend requests list' });
+        }
+        friendRequests = friendRequests.filter(id => id !== friendId);
+        await dbRun("UPDATE users SET friend_requests = ? WHERE id = ?", [JSON.stringify(friendRequests), id]);
+
+        reply.status(200).send({ message: 'friend requests list updated successfully' });
+    } catch {
+        reply.status(500).send({ error: 'Failed to retrieve friend requests list' });
+    }
+});
+
+// **10.1 delete friend from friends list**
 fastify.delete('/api/users/:id/friends', { preHandler: verifyToken }, async (request, reply) => {
     try {
         const { id } = request.params;
         if (parseInt(id) !== request.user.id) {
-            return reply.status(403).send({ error: 'Forbidden: You can only modify your own profile' });
+            return reply.status(403).send({ error: 'Forbidden: You can only delete friends from your own profile' });
         }
-        const { friendid } = request.body;
-        const row = await dbGet("SELECT friends FROM users WHERE id = ?", [id]);
-        if (!row) {
-            return reply.status(404).send({ error: "User not found" });
-        }
-        let jsonArray = JSON.parse(row.friends);
-        if (!jsonArray.includes(String(friendid))) {
-            console.log("Friend not on friends list: ", friendid);
+        const friendId = String(request.body.friendId);
+        let friends = JSON.parse((await dbGet("SELECT friends FROM users WHERE id = ?", [id])).friends);
+        if (!friends.includes(friendId)) {
             return reply.status(200).send({ message: 'Friend not on friends list' });
         }
-        jsonArray = jsonArray.filter(item => item !== String(friendid)); // Remove item
-        const result = await dbRun("UPDATE users SET friends = ? WHERE id = ?", [JSON.stringify(jsonArray), id]);
-        if (!result.changes) return reply.status(204).send({ message: 'No changes made' });
-        console.log("Friend deleted");
+        friends = friends.filter(id => id !== friendId);
+        await dbRun("UPDATE users SET friends = ? WHERE id = ?", [JSON.stringify(friends), id]);
+
+		const friend = await dbGet('SELECT friends FROM users WHERE id = ?', friendId);
+		if (!friend) return reply.status(404).send({ error: 'Friend not found' });
+
+        let friendFriends = JSON.parse(friend.friends);
+        friendFriends = friendFriends.filter(fid => fid !== id);
+        await dbRun("UPDATE users SET friends = ? WHERE id = ?", [JSON.stringify(friendFriends), friendId]);
         reply.status(200).send({ message: 'Friends list updated successfully' });
-        return ;
-    } catch (err) {
-        reply.status(500).send({ error: 'Failed to retrieve friends list.' });
+    } catch {
+        reply.status(500).send({ error: 'Failed to retrieve friends list' });
     }
 });
 
-// ** 11. Get current user name
+// **11. Get current user name**
 fastify.get('/api/whoami', { preHandler: checkLoginInStatus }, async (request, reply) => {
     try {
         if (!request.user) {
@@ -612,7 +691,7 @@ fastify.get('/api/whoami', { preHandler: checkLoginInStatus }, async (request, r
     }
 });
 
-// ** 12. Logout
+// **12. Logout**
 fastify.post('/api/logout', async (request, reply) => {
     reply.clearCookie('token', {
         path: '/'
@@ -620,11 +699,14 @@ fastify.post('/api/logout', async (request, reply) => {
 });
 
 
-// ** 13. Match history
+// **13. Match history**
 
 fastify.get('/api/users/:id/history', { preHandler: verifyToken }, async (request, reply) => {
     try {
         const { id } = request.params;
+		if (parseInt(id) !== request.user.id && !(JSON.parse((await dbGet('SELECT friends FROM users WHERE id = ?', [request.user.id])).friends)).includes(id)) {
+			return reply.status(403).send({ error: "You only have access to your own and your friends' match history" });
+		}
         const page = parseInt(request.query.page) || 1;       // default page 1
         const limit = parseInt(request.query.limit) || 25;     // default 25 per page
         const offset = (page - 1) * limit;    // go to the correct starting entry in db.
@@ -672,7 +754,10 @@ fastify.get('/api/users/:id/history', { preHandler: verifyToken }, async (reques
 fastify.get('/api/users/:id/pong', { preHandler: verifyToken }, async (request, reply) => {
     try {
         const { id } = request.params;
-        const user = await dbGet('SELECT id, nickname, pong_wins, pong_losses FROM users WHERE id = ?', [id]);
+		if (parseInt(id) !== request.user.id && !(JSON.parse((await dbGet('SELECT friends FROM users WHERE id = ?', [request.user.id])).friends)).includes(id)) {
+			return reply.status(403).send({ error: "You only have access to your own and your friends' pong wins and losses" });
+		}
+        const user = await dbGet('SELECT id, nickname, avatar, pong_wins, pong_losses FROM users WHERE id = ?', [id]);
         if (!user) return reply.status(404).send({ error: 'User not found' });
         reply.send(user);
     } catch (err) {
