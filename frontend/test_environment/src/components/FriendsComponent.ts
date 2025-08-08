@@ -2,7 +2,7 @@ import { User } from '../interfaces/user';
 import { updateHeaderInNavbar } from '../tools/helper.js';
 declare const axios: any;
 
-function attachInputListener(userId: number, userArray: Array<any>, getSearchText: () => string, setSearchText: (val: string) => void) {
+function attachInputListener(userId: number, userArray: Array<any>, getSearchText: () => string, setSearchText: (val: string) => void, friendRequestsArray: Array<any>, friendsList: Array<any>) {
 	const inputField = document.querySelector("#searchInput");
 
 	if (!inputField) return;
@@ -28,8 +28,8 @@ function attachInputListener(userId: number, userArray: Array<any>, getSearchTex
 			console.log("The results are: ", results);
 			const container = document.getElementById("dashboard-content");
 			if (container) {
-				container.innerHTML = renderFriends(results, searchText, userId);
-				attachInputListener(userId, results, getSearchText, setSearchText);
+				container.innerHTML = renderFriends(results, searchText, userId, friendsList, friendRequestsArray);
+				attachInputListener(userId, results, getSearchText, setSearchText, friendsList, friendRequestsArray);
 				attachFriendsRequestListener(userId);
 			}
 		}
@@ -41,6 +41,8 @@ const attachFriendsRequestListener = async (userId: number) => {
 
 	try {
 		const friendRequestButtons = document.querySelectorAll("#sendFriendRequestButton");
+		const acceptFriendRequestButtons = document.querySelectorAll("#acceptFriendRequestButton");
+		const declineFriendRequestButtons = document.querySelectorAll("#declineFriendRequestButton");
 		friendRequestButtons.forEach(button => {
 			button.addEventListener("click", async () => {
 				try {
@@ -54,11 +56,39 @@ const attachFriendsRequestListener = async (userId: number) => {
 				}
 			})
 		})
+		acceptFriendRequestButtons.forEach(button => {
+			button.addEventListener("click", async () => {
+				try {
+					console.log("UserId: ", userId);
+					const friendId = button.getAttribute("friendRequestId");
+					console.log("friendId: ", friendId);
+					const friendAddResponse = await axios.put(`https://trans.ella-peeters.me/api/users/${userId}/friends`, {
+						friendId
+					});
+					console.log("The response after accepting a new friend: ", friendAddResponse);
+				} catch (error) {
+					console.log(error);	
+				}
+			})
+		})
 
 	} catch (error) {
-	
+		console.log(error);	
 	}
 }
+
+//const attachGetFriendsRequestListener = async (userId: number) => {
+//	console.log("The getFriendsRequestListener runs");
+//
+//	try {
+//		const friendRequests = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/friends/requests`);
+//		let friendRequestsArray = friendRequests.data;
+//		console.log("The response after adding a new friend: ", friendRequestsArray);
+//
+//	} catch (error) {
+//			console.log(error);	
+//	}
+//}
 
 export const attachFriendsListener = async () => {
 	console.log("The attachFriendsListener runs");
@@ -72,6 +102,9 @@ export const attachFriendsListener = async () => {
 		const friendsListResponse = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/friends`);
 		const friendsList = friendsListResponse.data;
 		console.log("The friendslist is: ", friendsList);
+		const friendRequests = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/friends/requests`);
+		let friendRequestsArray = friendRequests.data;
+		console.log("The request list is: ", friendRequestsArray);
 
 		let searchText = '';
 		let userArray: Array<{ avatar: string, id: number, nickname: string }> = [];
@@ -81,9 +114,10 @@ export const attachFriendsListener = async () => {
 
 		const container = document.getElementById("dashboard-content");
 		if (container) {
-			container.innerHTML = renderFriends(userArray, searchText, userId);
-			attachInputListener(userId, userArray, getSearchText, setSearchText);
+			container.innerHTML = renderFriends(userArray, searchText, userId, friendsList, friendRequestsArray);
+			attachInputListener(userId, userArray, getSearchText, setSearchText, friendsList, friendRequestsArray);
 			attachFriendsRequestListener(userId);
+			//attachGetFriendsRequestListener(userId, friendRequestsArray);
 		}
 	} catch (error) {
 		console.error("The error is: ", error);
@@ -94,7 +128,7 @@ export const attachFriendsListener = async () => {
 	}
 };
 
-export const renderFriends = (userArray: Array<{avatar: string, id: number, nickname: string}>, searchText: string = '', userId: number) => {
+export const renderFriends = (userArray: Array<{avatar: string, id: number, nickname: string}>, searchText: string = '', userId: number, friendRequestsArray: Array<any>, friendsList: Array<any>) => {
 	return `
 				<div class="px-5 flex flex-col md:flex-col flex-1">
 					<div class="px-10 py-5 rounded-xl my-5 mb-10 bg-gray-900 flex flex-col justify-between">
@@ -102,10 +136,38 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
 							<h1 class="text-3xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Friends</h1>
 							<p class="text-slate-400">Connect and play with your buddies</p>
 						</div>
-						<div class="grid grid-cols-1 md:grid-cols-3 mt-6 gap-4">
+						<div class="mt-6 py-4 px-8 bg-slate-800 rounded-md border border-slate-700">
+							<h1 class="text-xl mb-4">Pending friend requests</h1>
+							<div>
+								${friendRequestsArray.length > 0 ? `
+									<div class="grid grid-cols-1 gap-4 mt-6 items-center">
+										${friendRequestsArray.map(user => `
+							 				<div class="flex bg-slate-600 border border-slate-400 rounded-md py-4 px-8 flex justify-between items-center">
+												<div class="flex flex-row items-center">
+													<img src=${user.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(2) + '&background=000000&color=ffffff&bold=true'} class="h-10"></img>
+							  						<p class="font-semibold text-white text-m ml-3 truncate max-w-[180px]">${user}</p>
+												</div>
+												<div class="flex flex-row gap-6 items-center">
+													<button id="acceptFriendRequestButton" class="bg-green-600 hover:bg-green-700 text-white shadow-lg transition-all rounded-md py-1 px-3" friendRequestId=${user}>Accept</button> 
+													<button id=""declineFriendRerquestButton" class="text-slate-400 hover:text-white px-3 py-1 border border-slate-400 rounded-md">Decline</button> 
+												</div>
+							 				</div>
+										`).join('')}
+										</div>
+									` : `
+									<div class="py-2">
+										<p class="text-m text-gray-400 font-extralight">No pending friend requests</p>
+									</div>
+								`}
+							</div>
+
+
+
+						</div>
+						<div class="grid grid-cols-1 md:grid-cols-3 mt-4 gap-4">
 							<div class="py-4 px-8 bg-slate-800 rounded-md border border-slate-700">
 								<h2 class="text-sm font-medium text-slate-300">Total friends</h2>
-								<p class="text-2xl font-bold text-white">10</p>
+								<p class="text-2xl font-bold text-white">${friendsList.length}</p>
 								<p class="text-xs text-slate-400">In your network</p>
 							</div>
 							<div class="py-4 px-8 bg-slate-800 rounded-md border border-slate-700">
