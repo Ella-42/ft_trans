@@ -1,5 +1,6 @@
 import { User } from '../interfaces/user';
 import { updateHeaderInNavbar } from '../tools/helper.js';
+import { navigateTo } from '../../router.js';
 declare const axios: any;
 
 const getFriendDetails = async (friendIds: string[]) => {
@@ -30,62 +31,87 @@ function attachInputListener(userId: number, userArray: Array<any>, getSearchTex
 		const target = event.target as HTMLInputElement;
 
 		if (event.key === "Enter") {
-			const searchText = target.value;
+			const searchText = target.value.trim();
 			setSearchText(searchText);
 			let results: Array<any> = [];
-			let newFriendsList: any[] = [];
-            		let newFriendRequestsArray: any[] = [];
-            		let newEnrichedFriendsList: any[] = [];
-
 			if (searchText.length >= 3) {
 				try {
 					const response = await axios.get(`https://trans.ella-peeters.me/api/users/search`, {
 						params: { q: searchText },
 					});
 					results = response.data;
-					const [friendsRes, requestsRes] = await Promise.all([
-                    				axios.get(`/api/users/${userId}/friends`),
-                    				axios.get(`/api/users/${userId}/friends/requests`)
-                			]);
-
-                			newFriendsList = friendsRes.data;
-                			newFriendRequestsArray = requestsRes.data;
-
-					newEnrichedFriendsList = await getFriendDetails(newFriendsList);
 				} catch (error) {
 					console.error("Search failed:", error);
 				}
 			} else {
-				newEnrichedFriendsList = enrichedFriendsList;
-				newFriendRequestsArray = friendRequestsArray;
+				console.log("The search did not happen");
 			}
 
-			console.log("The results are: ", results);
 			const container = document.getElementById("dashboard-content");
 			if (container) {
-				container.innerHTML = renderFriends(results, searchText, userId, newEnrichedFriendsList, newFriendRequestsArray);
-				attachInputListener(userId, results, getSearchText, setSearchText, newFriendRequestsArray, newEnrichedFriendsList);
-				attachFriendsRequestListener(userId);
+				container.innerHTML = renderFriends(results, searchText, userId, enrichedFriendsList, friendRequestsArray);
+				attachInputListener(userId, results, getSearchText, setSearchText, friendRequestsArray, enrichedFriendsList);
+				attachFriendButtonsListener(userId);
 			}
 		}
 	});
 }
 
-const attachFriendsRequestListener = async (userId: number) => {
-	console.log("The friendsRequestListener runs");
-
+const attachFriendButtonsListener = async (userId: number) => {
 	try {
+		let friendId = "";
 		const friendRequestButtons = document.querySelectorAll("#sendFriendRequestButton");
 		const acceptFriendRequestButtons = document.querySelectorAll("#acceptFriendRequestButton");
 		const declineFriendRequestButtons = document.querySelectorAll("#declineFriendRequestButton");
+		const removeFriendButtons = document.querySelectorAll("#deleteFriendButton");
 		friendRequestButtons.forEach(button => {
 			button.addEventListener("click", async () => {
 				try {
-					const friendId = button.getAttribute("friendId");
+					friendId = button.getAttribute("friendId");
 					const friendAddResponse = await axios.put(`https://trans.ella-peeters.me/api/users/${userId}/friends/requests`, {
 						friendId
 					});
-					console.log("The response after adding a new friend: ", friendAddResponse);
+					if (friendAddResponse.data.message === "Friend request already pending") {
+						button.outerHTML = `
+          						<p class="text-slate-400 px-2 py-1 text-xs">
+            							Friend request already pending	
+          						</p>
+        					`;
+					}
+					if (friendAddResponse.data.message === "Friend request sent successfully") {
+						button.outerHTML = `
+          						<p class="text-slate-400 px-2 py-1 text-xs">
+            							Friend request sent 
+          						</p>
+        					`;
+						
+					}
+
+				} catch (error) {
+					if (error.response.data.error === "Friend already pending for you, please add them instead") {
+						if (confirm("You already have a pending friend request from this user. Do you want to accept this request?")) {
+							await axios.put(`https://trans.ella-peeters.me/api/users/${userId}/friends`, {
+								friendId 
+							});
+							navigateTo("/safe/dashboard/friends");
+						}
+					}
+					else {
+						console.log(error);	
+					}
+				}
+			})
+		})
+		declineFriendRequestButtons.forEach(button => {
+			button.addEventListener("click", async () => {
+				try {
+					const friendId = button.getAttribute("friendRequestId");
+					if (confirm("Are you sure you want to decline this friend request?")) {
+						await axios.delete(`https://trans.ella-peeters.me/api/users/${userId}/friends/requests`, {
+							data: { friendId }
+						});
+						navigateTo("/safe/dashboard/friends");
+					}
 				} catch (error) {
 					console.log(error);	
 				}
@@ -94,13 +120,30 @@ const attachFriendsRequestListener = async (userId: number) => {
 		acceptFriendRequestButtons.forEach(button => {
 			button.addEventListener("click", async () => {
 				try {
-					console.log("UserId: ", userId);
 					const friendId = button.getAttribute("friendRequestId");
-					console.log("friendId: ", friendId);
-					const friendAddResponse = await axios.put(`https://trans.ella-peeters.me/api/users/${userId}/friends`, {
-						friendId
-					});
-					console.log("The response after accepting a new friend: ", friendAddResponse);
+					if (confirm("Are you sure you want to accept this friend request?")) {
+						await axios.put(`https://trans.ella-peeters.me/api/users/${userId}/friends`, {
+							friendId
+						});
+						navigateTo("/safe/dashboard/friends");
+					}
+				} catch (error) {
+					console.log(error);	
+				}
+			})
+		})
+		removeFriendButtons.forEach(button => {
+			button.addEventListener("click", async () => {
+				try {
+					const friendId = button.getAttribute("friendToDeleteId");
+					if (confirm("Are you sure you want to delete this friend?")) {
+						await axios.delete(`https://trans.ella-peeters.me/api/users/${userId}/friends`, {
+							data : { friendId }
+						});
+						navigateTo("/safe/dashboard/friends");
+					} else {
+						return
+					}
 				} catch (error) {
 					console.log(error);	
 				}
@@ -113,22 +156,15 @@ const attachFriendsRequestListener = async (userId: number) => {
 }
 
 export const attachFriendsListener = async () => {
-	console.log("The attachFriendsListener runs");
-
 	updateHeaderInNavbar("Friends");
-
 	try {
 		const idResponse = await axios.get('https://trans.ella-peeters.me/api/whoami');
 		const userId = idResponse.data.id;
-		console.log("The user id is: ", userId);
 		const friendsListResponse = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/friends`);
 		const friendsList = friendsListResponse.data;
-		console.log("The friendslist is: ", friendsList);
 		const friendRequests = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/friends/requests`);
 		let friendRequestsArray = friendRequests.data;
-
 		const enrichedFriendsList= await getFriendDetails(friendsList);
-		console.log("The enriched friendslist is: ", enrichedFriendsList);
 
 		let searchText = '';
 		let userArray: Array<{ avatar: string, id: number, nickname: string }> = [];
@@ -139,9 +175,8 @@ export const attachFriendsListener = async () => {
 		const container = document.getElementById("dashboard-content");
 		if (container) {
 			container.innerHTML = renderFriends(userArray, searchText, userId, enrichedFriendsList, friendRequestsArray);
-			attachInputListener(userId, userArray, getSearchText, setSearchText, enrichedFriendsList, friendRequestsArray);
-			attachFriendsRequestListener(userId);
-			//attachGetFriendsRequestListener(userId, friendRequestsArray);
+			attachInputListener(userId, userArray, getSearchText, setSearchText, friendRequestsArray, enrichedFriendsList);
+			attachFriendButtonsListener(userId);
 		}
 	} catch (error) {
 		console.error("The error is: ", error);
@@ -168,12 +203,14 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
 										${friendRequestsArray.map(user => `
 							 				<div class="flex bg-slate-600 border border-slate-400 rounded-md py-4 px-8 flex justify-between items-center">
 												<div class="flex flex-row items-center">
-													<img src=${user.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(2) + '&background=000000&color=ffffff&bold=true'} class="h-10"></img>
+													<div class="w-10 h-10 overflow-hidden">
+														<img src=${user.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(2) + '&background=000000&color=ffffff&bold=true'} class="w-full h-full object-cover"/>
+													</div>
 							  						<p class="font-semibold text-white text-m ml-3 truncate max-w-[180px]">${user}</p>
 												</div>
 												<div class="flex flex-row gap-6 items-center">
 													<button id="acceptFriendRequestButton" class="bg-green-600 hover:bg-green-700 text-white shadow-lg transition-all rounded-md py-1 px-3" friendRequestId=${user}>Accept</button> 
-													<button id=""declineFriendRequestButton" class="text-slate-400 hover:text-white px-3 py-1 border border-slate-400 rounded-md">Decline</button> 
+													<button id="declineFriendRequestButton" class="text-slate-400 hover:text-white px-3 py-1 border border-slate-400 rounded-md" friendRequestId=${user}>Decline</button> 
 												</div>
 							 				</div>
 										`).join('')}
@@ -214,14 +251,16 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
   								${userArray.length > 0 ? `
     									<div class="grid grid-cols-1 gap-4 mt-6 items-center">
       										${userArray.map(user => `
-        										<div class="flex bg-slate-600 border border-slate-400 rounded-md py-4 px-8 flex justify-between items-center">
+        										<div class="flex bg-slate-600 border border-slate-400 rounded-md py-4 px-8 justify-between items-center">
 												<div class="flex flex-row items-center">
-													<img src=${user.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.nickname) + '&background=000000&color=ffffff&bold=true'} class="h-10"></img>
+													<div class="w-10 h-10 overflow-hidden">
+														<img src=${user.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.nickname) + '&background=000000&color=ffffff&bold=true'} class="h-full w-full object-cover"/>
+													</div>
          												<p class="font-semibold text-white text-m ml-3 truncate max-w-[180px]">${user.nickname}</p>
 												</div>
 												<div class="flex flex-row gap-6 items-center">
-													${userId !== user.id ? `
-													<button id="sendFriendRequestButton" class="bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all rounded-md py-1 px-3" friendId=${user.id}>Add friend</button>` : `<p class="text-slate-400 px-2 py-1 text-xs">You cannot add yourself</p>`} 
+													${userId !== user.id ? 
+													`<button id="sendFriendRequestButton" class="bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all rounded-md py-1 px-3" friendId=${user.id}>Add friend</button>` : `<p class="text-slate-400 px-2 py-1 text-xs">You cannot add yourself</p>`} 
 													${userId !== user.id ? `
 													<a href="#" class="text-slate-400 hover:text-white hover:bg-slate-700 px-2 py-1 text-xs">View profile</a>`: ``} 
 												</div>
@@ -247,11 +286,13 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
 										${enrichedFriendsList.map(user => `
 							 				<div class="flex flex-col md:flex-row bg-slate-600 border border-slate-400 rounded-md py-4 gap-4 px-8 justify-between items-center">
 												<div class="flex flex-row items-center">
-													<img src=${user.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(2) + '&background=000000&color=ffffff&bold=true'} class="h-10"></img>
+													<div class="w-10 h-10 overflow-hidden">
+														<img src=${user.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(2) + '&background=000000&color=ffffff&bold=true'} class="h-full w-full object-cover"></img>
+													</div>
 							  						<p class="font-semibold text-white text-m ml-3 truncate max-w-[200px]">${user.nickname}</p>
 												</div>
 												<div class="flex flex-row gap-6 items-center">
-													<button id=""deleteFriendButton" class="text-white px-3 py-1 bg-red-400 rounded-md">Delete friend</button> 
+													<button id="deleteFriendButton" class="text-white px-3 py-1 bg-red-400 rounded-md" friendToDeleteId=${user.id}>Delete friend</button> 
 													<a href="#" class="text-slate-400 hover:text-white hover:bg-slate-700 px-2 py-1 text-xs">View profile</a> 
 												</div>
 							 				</div>

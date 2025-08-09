@@ -801,6 +801,10 @@ video {
   height: 1.5rem;
 }
 
+.h-full {
+  height: 100%;
+}
+
 .h-min {
   height: -moz-min-content;
   height: min-content;
@@ -820,6 +824,10 @@ video {
 
 .min-h-screen {
   min-height: 100vh;
+}
+
+.w-10 {
+  width: 2.5rem;
 }
 
 .w-11 {
@@ -959,6 +967,10 @@ video {
   --tw-space-y-reverse: 0;
   margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(1.5rem * var(--tw-space-y-reverse));
+}
+
+.overflow-hidden {
+  overflow: hidden;
 }
 
 .truncate {
@@ -1160,6 +1172,11 @@ video {
 
 .bg-top {
   background-position: top;
+}
+
+.object-cover {
+  -o-object-fit: cover;
+     object-fit: cover;
 }
 
 .p-2 {
