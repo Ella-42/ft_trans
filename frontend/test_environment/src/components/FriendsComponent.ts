@@ -40,6 +40,19 @@ function attachInputListener(userId: number, userArray: Array<any>, getSearchTex
 						params: { q: searchText },
 					});
 					results = response.data;
+
+					if (results.length === 0) {
+						const searchInformation = document.getElementById("searchInformation");
+     						if (searchInformation) {
+        						searchInformation.innerHTML = `
+          							<div class="flex flex-col items-center py-12">
+            								<p class="text-xl text-gray-400 mb-2 font-extralight">No users found</p>
+            								<p class="text-m text-gray-400 font-extralight">Try another search term or check your spelling.</p>
+          							</div>
+        						`;
+      						}
+     						return;
+					}
 				} catch (error) {
 					console.error("Search failed:", error);
 				}
@@ -249,7 +262,7 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
 
 							<div>
   								${userArray.length > 0 ? `
-    									<div class="grid grid-cols-1 gap-4 mt-6 items-center">
+    									<div id="searchInformation" class="grid grid-cols-1 gap-4 mt-6 items-center">
       										${userArray.map(user => `
         										<div class="flex bg-slate-600 border border-slate-400 rounded-md py-4 px-8 justify-between items-center">
 												<div class="flex flex-row items-center">
@@ -268,7 +281,7 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
       										`).join('')}
     									</div>
   									` : `
-									<div class="flex flex-col items-center py-12">
+									<div id="searchInformation" class="flex flex-col items-center py-12">
 										<p class="text-xl text-gray-400 mb-2 font-extralight">Search for players</p>
 										<p class="text-m text-gray-400 font-extralight">Enter at least 3 characters of a nickname to find other Pong players</p>
 									</div>
