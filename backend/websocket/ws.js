@@ -607,7 +607,7 @@ async function handleReady(roomId, playerId, conn) {
 
 async function getNick(uid)
 {
-    const res = await fetch(`http://database:3443/api/users/${uid}`, {
+    const res = await fetch(`http://database:4334/api/users/${uid}`, {
     method: 'GET',
     credentials: 'include',
     headers: {
@@ -617,13 +617,13 @@ async function getNick(uid)
     if (!res.ok) {
       const error = await res.json();
       console.log(`Error getting nickname: ${error.error || "Unknown error"}`);
-      return 'null';
+      return 'anonymous';
     }
     const user = await res.json();
     if (user && user.nickname)
       return user.nickname;
     else
-      return 'null';
+      return 'anonymous';
 }
 
 function startGame(roomId) {
