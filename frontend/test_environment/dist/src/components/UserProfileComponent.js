@@ -55,14 +55,14 @@ function attachInputListener(userId, userArray, getSearchText, setSearchText, fr
             }
             const container = document.getElementById("dashboard-content");
             if (container) {
-                container.innerHTML = renderFriends(results, searchText, userId, enrichedFriendsList, friendRequestsArray);
+                container.innerHTML = renderUserProfile(results, searchText, userId, enrichedFriendsList, friendRequestsArray);
                 attachInputListener(userId, results, getSearchText, setSearchText, friendRequestsArray, enrichedFriendsList);
-                attachFriendButtonsListener(userId);
+                attachUserProfileButtonsListener(userId);
             }
         }
     });
 }
-const attachFriendButtonsListener = async (userId) => {
+const attachUserProfileButtonsListener = async (userId) => {
     try {
         let friendId = "";
         const friendRequestButtons = document.querySelectorAll("#sendFriendRequestButton");
@@ -162,8 +162,8 @@ const attachFriendButtonsListener = async (userId) => {
         console.log(error);
     }
 };
-export const attachFriendsListener = async () => {
-    updateHeaderInNavbar("Friends");
+export const attachUserProfileListener = async () => {
+    updateHeaderInNavbar("User profile");
     try {
         const idResponse = await axios.get('https://trans.ella-peeters.me/api/whoami');
         const userId = idResponse.data.id;
@@ -171,7 +171,6 @@ export const attachFriendsListener = async () => {
         const friendsList = friendsListResponse.data;
         const friendRequests = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/friends/requests`);
         let friendRequestsArray = friendRequests.data;
-        console.log("The friend request array: ", friendRequestsArray);
         const enrichedFriendsList = await getFriendDetails(friendsList);
         let searchText = '';
         let userArray = [];
@@ -179,9 +178,9 @@ export const attachFriendsListener = async () => {
         const setSearchText = (val) => { searchText = val; };
         const container = document.getElementById("dashboard-content");
         if (container) {
-            container.innerHTML = renderFriends(userArray, searchText, userId, enrichedFriendsList, friendRequestsArray);
+            container.innerHTML = renderUserProfile(userArray, searchText, userId, enrichedFriendsList, friendRequestsArray);
             attachInputListener(userId, userArray, getSearchText, setSearchText, friendRequestsArray, enrichedFriendsList);
-            attachFriendButtonsListener(userId);
+            attachUserProfileButtonsListener(userId);
         }
     }
     catch (error) {
@@ -192,12 +191,12 @@ export const attachFriendsListener = async () => {
         }
     }
 };
-export const renderFriends = (userArray, searchText = '', userId, enrichedFriendsList, friendRequestsArray) => {
+export const renderUserProfile = (userArray, searchText = '', userId, enrichedFriendsList, friendRequestsArray) => {
     return `
 				<div class="px-5 flex flex-col md:flex-col flex-1">
 					<div class="px-10 py-5 rounded-xl my-5 mb-10 bg-gray-900 flex flex-col justify-between">
 						<div>
-							<h1 class="text-3xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Friends</h1>
+							<h1 class="text-3xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Pieter Claus</h1>
 							<p class="text-slate-400">Connect and play with your buddies</p>
 						</div>
 						<div class="mt-6 py-4 px-8 bg-slate-800 rounded-md border border-slate-700">
