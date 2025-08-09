@@ -173,6 +173,7 @@ export const attachFriendsListener = async () => {
         let friendRequestsArray = friendRequests.data;
         console.log("The friend request array: ", friendRequestsArray);
         const enrichedFriendsList = await getFriendDetails(friendsList);
+        console.log("enriched: ", enrichedFriendsList);
         let searchText = '';
         let userArray = [];
         const getSearchText = () => searchText;
@@ -264,8 +265,7 @@ export const renderFriends = (userArray, searchText = '', userId, enrichedFriend
          												<p class="font-semibold text-white text-m ml-3 truncate max-w-[180px]">${user.nickname}</p>
 												</div>
 												<div class="flex flex-row gap-6 items-center">
-													${userId !== user.id ?
-        `<button id="sendFriendRequestButton" class="bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all rounded-md py-1 px-3" friendId=${user.id}>Add friend</button>` : `<p class="text-slate-400 px-2 py-1 text-xs">You cannot add yourself</p>`} 
+													${userId !== user.id ? (enrichedFriendsList.some(friend => String(friend.id) === String(user.id)) ? `<p class="text-slate-400 px-2 py-1 text-xs">Already friends</p>` : `<button id="sendFriendRequestButton" class="bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all rounded-md py-1 px-3" friendId=${user.id}>Add friend</button>`) : `<p class="text-slate-400 px-2 py-1 text-xs">You cannot add yourself</p>`} 
 													${userId !== user.id ? `
 													<a href="#" class="text-slate-400 hover:text-white hover:bg-slate-700 px-2 py-1 text-xs">View profile</a>` : ``} 
 												</div>
@@ -278,6 +278,7 @@ export const renderFriends = (userArray, searchText = '', userId, enrichedFriend
 										<p class="text-m text-gray-400 font-extralight">Enter at least 3 characters of a nickname to find other Pong players</p>
 									</div>
   								`}
+								
 							</div>
 
 

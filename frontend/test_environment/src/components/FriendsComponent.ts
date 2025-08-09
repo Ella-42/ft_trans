@@ -178,7 +178,8 @@ export const attachFriendsListener = async () => {
 		const friendRequests = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/friends/requests`);
 		let friendRequestsArray = friendRequests.data;
 		console.log("The friend request array: ", friendRequestsArray);
-		const enrichedFriendsList= await getFriendDetails(friendsList);
+		const enrichedFriendsList	= await getFriendDetails(friendsList);
+		console.log("enriched: ", enrichedFriendsList);
 
 		let searchText = '';
 		let userArray: Array<{ avatar: string, id: number, nickname: string }> = [];
@@ -264,7 +265,8 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
 							<div>
   								${userArray.length > 0 ? `
     									<div id="searchInformation" class="grid grid-cols-1 gap-4 mt-6 items-center">
-      										${userArray.map(user => `
+      										${userArray.map(user =>  
+											`
         										<div class="flex bg-slate-600 border border-slate-400 rounded-md py-4 px-8 justify-between items-center">
 												<div class="flex flex-row items-center">
 													<div class="w-10 h-10 overflow-hidden">
@@ -273,8 +275,7 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
          												<p class="font-semibold text-white text-m ml-3 truncate max-w-[180px]">${user.nickname}</p>
 												</div>
 												<div class="flex flex-row gap-6 items-center">
-													${userId !== user.id ? 
-													`<button id="sendFriendRequestButton" class="bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all rounded-md py-1 px-3" friendId=${user.id}>Add friend</button>` : `<p class="text-slate-400 px-2 py-1 text-xs">You cannot add yourself</p>`} 
+													${userId !== user.id ? (enrichedFriendsList.some(friend => String(friend.id) === String(user.id)) ? `<p class="text-slate-400 px-2 py-1 text-xs">Already friends</p>` : `<button id="sendFriendRequestButton" class="bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all rounded-md py-1 px-3" friendId=${user.id}>Add friend</button>`) : `<p class="text-slate-400 px-2 py-1 text-xs">You cannot add yourself</p>`} 
 													${userId !== user.id ? `
 													<a href="#" class="text-slate-400 hover:text-white hover:bg-slate-700 px-2 py-1 text-xs">View profile</a>`: ``} 
 												</div>
@@ -287,6 +288,7 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
 										<p class="text-m text-gray-400 font-extralight">Enter at least 3 characters of a nickname to find other Pong players</p>
 									</div>
   								`}
+								
 							</div>
 
 
