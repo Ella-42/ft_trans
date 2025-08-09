@@ -177,9 +177,7 @@ export const attachFriendsListener = async () => {
 		const friendsList = friendsListResponse.data;
 		const friendRequests = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/friends/requests`);
 		let friendRequestsArray = friendRequests.data;
-		console.log("The friend request array: ", friendRequestsArray);
 		const enrichedFriendsList	= await getFriendDetails(friendsList);
-		console.log("enriched: ", enrichedFriendsList);
 
 		let searchText = '';
 		let userArray: Array<{ avatar: string, id: number, nickname: string }> = [];
