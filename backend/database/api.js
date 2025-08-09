@@ -257,13 +257,13 @@ fastify.get('/api/users/search', { preHandler: verifyToken }, async (request, re
 	const query = request.query.q;
 	if (typeof query !== 'string')
 		return reply.status(400).send({ error: 'Invalid query format, has to be string' });
-	if (query.length <= 3)
+	if (query.length < 3)
 		return reply.status(400).send({ error: 'Invalid query length, has to be at least 3 characters' });
 
 	try {
 		return await dbAll(`SELECT id, nickname, avatar FROM users WHERE LOWER(nickname) LIKE LOWER(?) LIMIT 25`, [`%${query}%`]);
 	} catch {
-		return reply.status(500).send({ error: 'Failed to fetch user(s)' });
+		reply.status(500).send({ error: 'Failed to fetch user(s)' });
 	}
 });
 
@@ -280,8 +280,8 @@ internalFastify.get('/api/users', async (request, reply) => {
 fastify.get('/api/users/:id', { preHandler: verifyToken }, async (request, reply) => {
     try {
         const { id } = request.params;
-		if (parseInt(id) !== request.user.id && !(JSON.parse((await dbGet('SELECT friends FROM users WHERE id = ?', [request.user.id])).friends)).includes(id)) {
-			return reply.status(403).send({ error: "You only have access to your own and your friends' profiles" });
+		if (parseInt(id) !== request.user.id && !(JSON.parse((await dbGet('SELECT friend_requests FROM users WHERE id = ?', [request.user.id])).friend_requests)).includes(id) && !(JSON.parse((await dbGet('SELECT friends FROM users WHERE id = ?', [request.user.id])).friends)).includes(id)) {
+			return reply.status(403).send({ error: "You only have access to your own, those who've sent you a friend request and your friends' profiles" });
 		}
         const user = await dbGet('SELECT id, nickname, avatar FROM users WHERE id = ?', [id]);
         if (!user) return reply.status(404).send({ error: 'User not found' });
@@ -306,6 +306,18 @@ fastify.get('/api/users/:id/avatar', { preHandler: verifyToken }, async (request
         reply.send({avatar: avatar});
     } catch {
         reply.status(500).send({ error: 'Failed to retrieve avatar' });
+    }
+});
+
+// **2.2 Fetch user by ID**
+internalFastify.get('/api/users/:id', async (request, reply) => {
+    try {
+        const { id } = request.params;
+        const user = await dbGet('SELECT id, nickname, avatar FROM users WHERE id = ?', [id]);
+        if (!user) return reply.status(404).send({ error: 'User not found' });
+        reply.send(user);
+    } catch (err) {
+        reply.status(500).send({ error: 'Failed to fetch user' });
     }
 });
 
@@ -431,7 +443,43 @@ fastify.put('/api/users/:id', { preHandler: verifyToken }, async (request, reply
 });
 
 // **5. Update user activity**
-// TODO
+fastify.put('/api/users/:id/ping', { preHandler: verifyToken }, async (request, reply) => {
+	const { id } = request.params;
+	if (parseInt(id) !== request.user.id) {
+		return reply.status(403).send({ error: 'Forbidden: You can only update last active on your own profile' });
+	}
+	try {
+		await dbRun('UPDATE users SET active = ? WHERE id = ?', [Math.floor(Date.now() / 1000), id]);
+		reply.status(200).send({ message: 'Updated last active successfully' });
+	} catch {
+        reply.status(500).send({ error: 'Failed to update last active' });
+	}
+});
+
+// **5.1 Fetch user's last active status**
+fastify.get('/api/users/:id/ping', { preHandler: verifyToken }, async (request, reply) => {
+	try {
+	    const { id } = request.params;
+		if (parseInt(id) !== request.user.id && !(JSON.parse((await dbGet('SELECT friends FROM users WHERE id = ?', [request.user.id])).friends)).includes(id)) {
+			return reply.status(403).send({ error: "You only have access to your own and your friends' activity status" });
+		}
+		const lastActive = Math.floor(Date.now() / 1000) - (await dbGet('SELECT active FROM users WHERE id = ?', [id])).active;
+		switch (true) {
+			case lastActive <= 60:
+				return reply.status(200).send({ message: 'Online' });
+			case lastActive <= 300:
+				return reply.status(200).send({ message: 'Last active recently' });
+			case lastActive <= 3600:
+				return reply.status(200).send({ message: 'Last active this hour' });
+			case lastActive <= 86400:
+				return reply.status(200).send({ message: 'Last active today' });
+			default:
+				return reply.status(200).send({ message: 'Offline' });
+		}
+	} catch {
+        reply.status(500).send({ error: 'Failed to fetch activity status' });
+	}
+});
 
 // **6. Delete user**
 fastify.delete('/api/users/:id', { preHandler: verifyToken }, async (request, reply) => {
