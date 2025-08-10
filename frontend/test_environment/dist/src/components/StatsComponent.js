@@ -4,7 +4,6 @@ export const attachStatsListener = async (page = 1) => {
     try {
         const idResponse = await axios.get('https://trans.ella-peeters.me/api/whoami');
         const userId = idResponse.data.id;
-        //const userId = 1
         const matchResponse = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/history?page=${page}`);
         const { totalCount, results: matchHistoryArray, totalPages, currentPage } = matchResponse.data;
         const winsAndLossesResponse = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/pong`);

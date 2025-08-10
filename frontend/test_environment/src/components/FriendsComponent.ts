@@ -22,7 +22,7 @@ const getFriendDetails = async (friendIds: string[]) => {
 	return friendDetails.filter(Boolean);
 }
 
-function attachInputListener(userId: number, userArray: Array<any>, getSearchText: () => string, setSearchText: (val: string) => void, friendRequestsArray: Array<any>, enrichedFriendsList: Array<any>) {
+function attachInputListener(userId: number, userArray: Array<any>, getSearchText: () => string, setSearchText: (val: string) => void, enrichedFriendRequestsArray: Array<any>, enrichedFriendsList: Array<any>) {
 	const inputField = document.querySelector("#searchInput");
 
 	if (!inputField) return;
@@ -56,14 +56,11 @@ function attachInputListener(userId: number, userArray: Array<any>, getSearchTex
 				} catch (error) {
 					console.error("Search failed:", error);
 				}
-			} else {
-				console.log("The search did not happen");
 			}
-
 			const container = document.getElementById("dashboard-content");
 			if (container) {
-				container.innerHTML = renderFriends(results, searchText, userId, enrichedFriendsList, friendRequestsArray);
-				attachInputListener(userId, results, getSearchText, setSearchText, friendRequestsArray, enrichedFriendsList);
+				container.innerHTML = renderFriends(results, searchText, userId, enrichedFriendsList, enrichedFriendRequestsArray);
+				attachInputListener(userId, results, getSearchText, setSearchText, enrichedFriendRequestsArray, enrichedFriendsList);
 				attachFriendButtonsListener(userId);
 			}
 		}
@@ -176,8 +173,9 @@ export const attachFriendsListener = async () => {
 		const friendsListResponse = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/friends`);
 		const friendsList = friendsListResponse.data;
 		const friendRequests = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/friends/requests`);
-		let friendRequestsArray = friendRequests.data;
-		const enrichedFriendsList	= await getFriendDetails(friendsList);
+		const friendRequestsArray = friendRequests.data;
+		const enrichedFriendRequestsArray = await getFriendDetails(friendRequestsArray);
+		const enrichedFriendsList = await getFriendDetails(friendsList);
 
 		let searchText = '';
 		let userArray: Array<{ avatar: string, id: number, nickname: string }> = [];
@@ -187,8 +185,8 @@ export const attachFriendsListener = async () => {
 
 		const container = document.getElementById("dashboard-content");
 		if (container) {
-			container.innerHTML = renderFriends(userArray, searchText, userId, enrichedFriendsList, friendRequestsArray);
-			attachInputListener(userId, userArray, getSearchText, setSearchText, friendRequestsArray, enrichedFriendsList);
+			container.innerHTML = renderFriends(userArray, searchText, userId, enrichedFriendsList, enrichedFriendRequestsArray);
+			attachInputListener(userId, userArray, getSearchText, setSearchText, enrichedFriendRequestsArray, enrichedFriendsList);
 			attachFriendButtonsListener(userId);
 		}
 	} catch (error) {
@@ -200,7 +198,7 @@ export const attachFriendsListener = async () => {
 	}
 };
 
-export const renderFriends = (userArray: Array<{avatar: string, id: number, nickname: string}>, searchText: string = '', userId: number, enrichedFriendsList: Array<any>, friendRequestsArray: Array<any>) => {
+export const renderFriends = (userArray: Array<{avatar: string, id: number, nickname: string}>, searchText: string = '', userId: number, enrichedFriendsList: Array<any>, enrichedFriendRequestsArray: Array<any>) => {
 	return `
 				<div class="px-5 flex flex-col md:flex-col flex-1">
 					<div class="px-10 py-5 rounded-xl my-5 mb-10 bg-gray-900 flex flex-col justify-between">
@@ -211,19 +209,19 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
 						<div class="mt-6 py-4 px-8 bg-slate-800 rounded-md border border-slate-700">
 							<h1 class="text-xl mb-4">Pending friend requests</h1>
 							<div>
-								${friendRequestsArray.length > 0 ? `
+								${enrichedFriendRequestsArray.length > 0 ? `
 									<div class="grid grid-cols-1 gap-4 mt-6 items-center">
-										${friendRequestsArray.map(user => `
+										${enrichedFriendRequestsArray.map(user => `
 							 				<div class="flex bg-slate-600 border border-slate-400 rounded-md py-4 px-8 flex justify-between items-center">
 												<div class="flex flex-row items-center">
 													<div class="w-10 h-10 overflow-hidden">
 														<img src=${user.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(2) + '&background=000000&color=ffffff&bold=true'} class="w-full h-full object-cover"/>
 													</div>
-							  						<p class="font-semibold text-white text-m ml-3 truncate max-w-[180px]">${user}</p>
+							  						<p class="font-semibold text-white text-m ml-3 truncate max-w-[180px]">${user.nickname}</p>
 												</div>
 												<div class="flex flex-row gap-6 items-center">
-													<button id="acceptFriendRequestButton" class="bg-green-600 hover:bg-green-700 text-white shadow-lg transition-all rounded-md py-1 px-3" friendRequestId=${user}>Accept</button> 
-													<button id="declineFriendRequestButton" class="text-slate-400 hover:text-white px-3 py-1 border border-slate-400 rounded-md" friendRequestId=${user}>Decline</button> 
+													<button id="acceptFriendRequestButton" class="bg-green-600 hover:bg-green-700 text-white shadow-lg transition-all rounded-md py-1 px-3" friendRequestId=${user.id}>Accept</button> 
+													<button id="declineFriendRequestButton" class="text-slate-400 hover:text-white px-3 py-1 border border-slate-400 rounded-md" friendRequestId=${user.id}>Decline</button> 
 												</div>
 							 				</div>
 										`).join('')}

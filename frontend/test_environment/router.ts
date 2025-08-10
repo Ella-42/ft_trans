@@ -15,7 +15,7 @@ import { renderFriends } from './src/components/FriendsComponent.js';
 import { getCookie } from './src/tools/helper.js';
 import { attachStatsListener } from './src/components/StatsComponent.js';
 import { attachFriendsListener } from './src/components/FriendsComponent.js';
-import { attachUserProfileListener } from './src/components/UserProfileComponent.js';
+import { attachUserProfileListener, renderUserProfile } from './src/components/UserProfileComponent.js';
 
 declare const axios: any;
 
@@ -77,6 +77,12 @@ export const router = async () => {
 
         		// Inject only the inner page
         		const innerContent = dashboardRoutes[path];
+			if (path.startsWith("/safe/dashboard/user/")) {
+    				const userIdFromPath = path.split("/").pop();
+    				document.getElementById("dashboard-content").innerHTML = renderUserProfile(userIdFromPath);
+    				attachUserProfileListener();
+   				return;
+			}
         		if (innerContent) {
           			document.getElementById("dashboard-content").innerHTML = innerContent(user);
 				if (path === "/safe/dashboard")
