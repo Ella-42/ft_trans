@@ -12,6 +12,7 @@ import { renderMatchmaking, attachMatchmakingPong } from './src/components/Match
 import { renderTournament } from './src/components/TournamentComponent.js';
 import { attachStatsListener } from './src/components/StatsComponent.js';
 import { attachFriendsListener } from './src/components/FriendsComponent.js';
+import { attachUserProfileListener, renderUserProfile } from './src/components/UserProfileComponent.js';
 const routes = {
     "/safe": renderHomePage,
     "/safe/login": renderLogin,
@@ -28,6 +29,7 @@ const dashboardRoutes = {
     "/safe/dashboard/profile": () => renderProfile(),
     "/safe/dashboard/stats": () => "",
     "/safe/dashboard/friends": () => "",
+    "/safe/dashboard/userprofile": () => "",
 };
 export const navigateTo = (url) => {
     window.pongClean?.();
@@ -61,6 +63,12 @@ export const router = async () => {
                 attachSideBarActiveLinkListener();
                 // Inject only the inner page
                 const innerContent = dashboardRoutes[path];
+                if (path.startsWith("/safe/dashboard/user/")) {
+                    const userIdFromPath = path.split("/").pop();
+                    document.getElementById("dashboard-content").innerHTML = renderUserProfile(userIdFromPath);
+                    attachUserProfileListener();
+                    return;
+                }
                 if (innerContent) {
                     document.getElementById("dashboard-content").innerHTML = innerContent(user);
                     if (path === "/safe/dashboard") {
@@ -83,6 +91,9 @@ export const router = async () => {
                     }
                     else if (path === "/safe/dashboard/friends") {
                         attachFriendsListener();
+                    }
+                    else if (path === "/safe/dashboard/userprofile") {
+                        attachUserProfileListener();
                     }
                 }
                 else {

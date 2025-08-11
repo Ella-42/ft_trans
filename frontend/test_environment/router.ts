@@ -15,6 +15,7 @@ import { renderFriends } from './src/components/FriendsComponent.js';
 import { getCookie } from './src/tools/helper.js';
 import { attachStatsListener } from './src/components/StatsComponent.js';
 import { attachFriendsListener } from './src/components/FriendsComponent.js';
+import { attachUserProfileListener, renderUserProfile } from './src/components/UserProfileComponent.js';
 
 declare const axios: any;
 
@@ -35,6 +36,7 @@ const dashboardRoutes: { [key: string]: (user: any) => string } = {
 	"/safe/dashboard/profile": () => renderProfile(),
 	"/safe/dashboard/stats": () => "",
 	"/safe/dashboard/friends": () => "",
+	"/safe/dashboard/userprofile": () => "",
 };
 
 export const navigateTo = (url: string) => {
@@ -75,6 +77,12 @@ export const router = async () => {
 
         		// Inject only the inner page
         		const innerContent = dashboardRoutes[path];
+			if (path.startsWith("/safe/dashboard/user/")) {
+    				const userIdFromPath = path.split("/").pop();
+    				document.getElementById("dashboard-content").innerHTML = renderUserProfile(userIdFromPath);
+    				attachUserProfileListener();
+   				return;
+			}
         		if (innerContent) {
           			document.getElementById("dashboard-content").innerHTML = innerContent(user);
 				if (path === "/safe/dashboard")
@@ -104,6 +112,10 @@ export const router = async () => {
 				else if (path === "/safe/dashboard/friends")
 				{
 					attachFriendsListener();
+				}
+				else if(path === "/safe/dashboard/userprofile")
+				{
+					attachUserProfileListener();
 				}
         		} else {
           			document.getElementById("dashboard-content").innerHTML = `<p>404 - Page not found in dashboard</p>`;

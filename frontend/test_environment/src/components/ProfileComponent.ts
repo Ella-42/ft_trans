@@ -1,5 +1,5 @@
 import { togglePassword, provideUserFeedback } from '../tools/helper.js';
-import { updateHeaderInNavbar } from '../tools/helper.js';
+import { updateHeaderInNavbar, getCookie } from '../tools/helper.js';
 declare const axios: any;
 declare const Swal: any;
 
@@ -51,12 +51,8 @@ export const attachUpdateProfileFormListener = async () => {
 	const deleteProfileButton = document.querySelector("#deleteProfileButton");
 	deleteProfileButton.addEventListener('click', async (e) => {
 		if (deleteProfileButton) {
-				const confirmed = confirm("Are you sure you want to delete your profile? This action cannot be undone.");
-				const token = localStorage.getItem('token');
-				if (!token)
-					return;
-			
-				if (confirmed) {
+				if (confirm("Are you sure you want to delete your profile and all your data? This cannot be undone.")) {
+					const token = getCookie('token');
 					try {
 						const deleteResponse = await axios.delete(`https://trans.ella-peeters.me/api/users/${response.data.id}`, {
 						headers: {

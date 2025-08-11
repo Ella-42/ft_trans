@@ -18,6 +18,7 @@ export function renderLoggedInSideBar(): string {
 					<a data-link href="/safe/dashboard/profile" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Profile</a>
 					<a data-link href="/safe/dashboard/stats" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Stats</a>
 					<a data-link href="/safe/dashboard/friends" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Friends</a>
+					<a data-link href="/safe/dashboard/userprofile" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">User profile</a>
 				</div>
 		</nav>
   `;

@@ -1,55 +1,48 @@
-import { User } from '../interfaces/user';
 import { updateHeaderInNavbar } from '../tools/helper.js';
-declare const axios: any;
-
-export const attachStatsListener= async (page = 1) => {
-	updateHeaderInNavbar("Statistics");
-	try {
-		const idResponse = await axios.get('https://trans.ella-peeters.me/api/whoami');
-    		const userId = idResponse.data.id;
-    		const matchResponse = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/history?page=${page}`);
-		const { totalCount, results: matchHistoryArray, totalPages, currentPage } = matchResponse.data;
-    		const winsAndLossesResponse = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/pong`);
-		const wins = winsAndLossesResponse.data.pong_wins;
-		const losses = winsAndLossesResponse.data.pong_losses;
-    		const container = document.getElementById("dashboard-content");
-    		if (container) {
-      			container.innerHTML = renderStats(userId, totalCount, wins, losses, matchHistoryArray, currentPage, totalPages);
-			attachPaginationListeners(currentPage, totalPages);
-    		}
-  	} catch (error) {
-    		console.error("The error is: ", error);
-    		const container = document.getElementById("dashboard-content");
-    		if (container) {
-      			container.innerHTML = `<p class="text-red-500">Error loading stats.</p>`;
-    		}
-  	}
+export const attachUserProfileListener = async (page = 1) => {
+    updateHeaderInNavbar("User profile");
+    try {
+        const idResponse = await axios.get('https://trans.ella-peeters.me/api/whoami');
+        const userId = idResponse.data.id;
+        const matchResponse = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/history?page=${page}`);
+        const { totalCount, results: matchHistoryArray, totalPages, currentPage } = matchResponse.data;
+        const winsAndLossesResponse = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/pong`);
+        const wins = winsAndLossesResponse.data.pong_wins;
+        const losses = winsAndLossesResponse.data.pong_losses;
+        const container = document.getElementById("dashboard-content");
+        if (container) {
+            container.innerHTML = renderUserProfile(userId, totalCount, wins, losses, matchHistoryArray, currentPage, totalPages);
+            attachPaginationListeners(currentPage, totalPages);
+        }
+    }
+    catch (error) {
+        console.error("The error is: ", error);
+        const container = document.getElementById("dashboard-content");
+        if (container) {
+            container.innerHTML = `<p class="text-red-500">Error loading stats.</p>`;
+        }
+    }
 };
-
-const attachPaginationListeners = (currentPage: number, totalPages: number) => {
-	const prevBtn = document.getElementById("prev-page");
-  	const nextBtn = document.getElementById("next-page");
-
-	if (prevBtn) {
-    		prevBtn.addEventListener("click", () => {
-      			if (currentPage > 1) {
-        			attachStatsListener(currentPage - 1);
-      			}
-   		});
-  	}
-
-  	if (nextBtn) {
-		nextBtn.addEventListener("click", () => {
-      			if (currentPage < totalPages) {
-        			attachStatsListener(currentPage + 1);
-      			}
-    		});
-  	}
+const attachPaginationListeners = (currentPage, totalPages) => {
+    const prevBtn = document.getElementById("prev-page");
+    const nextBtn = document.getElementById("next-page");
+    if (prevBtn) {
+        prevBtn.addEventListener("click", () => {
+            if (currentPage > 1) {
+                attachUserProfileListener(currentPage - 1);
+            }
+        });
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener("click", () => {
+            if (currentPage < totalPages) {
+                attachStatsListener(currentPage + 1);
+            }
+        });
+    }
 };
-
-
-export const renderStats = (userId: number, totalCount: number, wins: number, losses: number, matchHistoryArray: Array<{time: string, winner: { id: number; nickname: string }, loser: {id: number; nickname: string}}>, currentPage: number, totalPages: number) => {
-	return `
+export const renderUserProfile = (userId, totalCount, wins, losses, matchHistoryArray, currentPage, totalPages) => {
+    return `
 				<div class="px-5 flex flex-col md:flex-col flex-1">
 					<div class="px-10 py-5 rounded-xl my-5 mb-10 bg-gray-900 flex flex-col justify-between">
 						<div>
@@ -80,26 +73,24 @@ export const renderStats = (userId: number, totalCount: number, wins: number, lo
 								${matchHistoryArray.length > 0 ? `
 								<div class="grid grid-cols-1 gap-4">
 									${matchHistoryArray.map(match => {
-										const date = new Date(match.time);
-										const formattedTime = date.toLocaleString('nl-BE', {
-  										year: 'numeric',
-  										month: 'short',
-  										day: 'numeric',
-  										hour: '2-digit',
-  										minute: '2-digit',
-  										hour12: false,
-									});
-									
-
-									return `
+        const date = new Date(match.time);
+        const formattedTime = date.toLocaleString('nl-BE', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+        });
+        return `
       									<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 bg-slate-600 rounded-md py-4 px-8 items-center">
-										<p class="${userId === match.winner.id ? 'bg-green-500/20 p-2 text-green-400 w-min h-min rounded-md text-sm border border-green-500/30' : 'bg-red-500/20 p-2 text-red-400 w-min h-min rounded-md text-sm border border-red-500/30'}">${userId === match.winner.id ? "WIN": "LOSS"}</p>
+										<p class="${userId === match.winner.id ? 'bg-green-500/20 p-2 text-green-400 w-min h-min rounded-md text-sm border border-green-500/30' : 'bg-red-500/20 p-2 text-red-400 w-min h-min rounded-md text-sm border border-red-500/30'}">${userId === match.winner.id ? "WIN" : "LOSS"}</p>
 										<p class="text-sm text-white">vs. ${userId === match.winner.id ? match.winner.nickname : match.loser.nickname}</p>
         									<p class="text-xs text-slate-400">Score: 4-12</p>
         									<p class="text-xs text-slate-400">${formattedTime}</p>
       									</div>
    								 	`;
-									}).join('')}
+    }).join('')}
 								 </div>
 								 <div class="flex justify-center mt-6 space-x-4">
   									<button id="prev-page" class="px-4 py-2 bg-slate-700 text-white rounded disabled:opacity-50" ${currentPage === 1 ? "disabled" : ""}>Previous</button>
@@ -114,4 +105,4 @@ export const renderStats = (userId: number, totalCount: number, wins: number, lo
 					</div>	
 				</div>
 	  `;
-}
+};
