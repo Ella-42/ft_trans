@@ -396,33 +396,24 @@ async function aiStart(roomId, conn, paddle) {
     if (room.conn && room.conn.socket.readyState === 1) {
       room.conn.socket.send(JSON.stringify({ type: "game_tick", state: room.game }));
     }
-    if (room.game.player1Score >= 11 || room.game.player2Score >= 11) {
-      if (room.game.player1Score > room.game.player2Score &&
-        room.game.player1Score - room.game.player2Score >= 2) {
-        clearInterval(room.gameLoopInterval);
-        const result = paddle === 1 ? 1 : 0;
-        if (room.conn && room.conn.socket.readyState === 1) {
-          room.conn.socket.send(JSON.stringify({
-            type: 'game_over',
-            result: { win: result },
-          }));
-          room.conn.socket.close();
-        }
-        delete aiRooms[roomId];
+    if ((room.game.player1Score >= 11 && room.game.player1Score - room.game.player2Score >= 2)
+	|| (room.game.player2Score >= 11 && room.game.player2Score - room.game.player1Score >= 2)) {
+      clearInterval(room.gameLoopInterval);
+      let result;
+      if (room.game.player1Score > room.game.player2Score) {
+        result = paddle === 1 ? 1 : 0;
       }
-      else if (room.game.player2Score > room.game.player1Score &&
-        room.game.player2Score - room.game.player1Score >= 2) {
-        clearInterval(room.gameLoopInterval);
-        const result = paddle === 2 ? 1 : 0;
-        if (room.conn && room.conn.socket.readyState === 1) {
-          room.conn.socket.send(JSON.stringify({
-            type: 'game_over',
-            result: { win: result },
-          }));
-          room.conn.socket.close();
-        }
-        delete aiRooms[roomId];
+      else if (room.game.player2Score > room.game.player1Score) {
+        result = paddle === 2 ? 1 : 0;
       }
+      if (room.conn && room.conn.socket.readyState === 1) {
+        room.conn.socket.send(JSON.stringify({
+          type: 'game_over',
+          result: { win: result },
+        }));
+        room.conn.socket.close();
+      }
+      delete aiRooms[roomId];
     }
   }, FRAME_RATE);
 }
@@ -495,31 +486,24 @@ async function localStart(roomId, conn) {
     if (room.conn && room.conn.socket.readyState === 1) {
       room.conn.socket.send(JSON.stringify({ type: "game_tick", state: room.game }));
     }
-    if (room.game.player1Score >= 11 || room.game.player2Score >= 11) {
-      if (room.game.player1Score > room.game.player2Score &&
-        room.game.player1Score - room.game.player2Score >= 2) {
-        clearInterval(room.gameLoopInterval);
-        if (room.conn && room.conn.socket.readyState === 1) {
-          room.conn.socket.send(JSON.stringify({
-            type: 'game_over',
-            winner: { id: 1 },
-          }));
-          room.conn.socket.close();
-        }
-        delete localRooms[roomId];
+    if ((room.game.player1Score >= 11 && room.game.player1Score - room.game.player2Score >= 2)
+	|| (room.game.player2Score >= 11 && room.game.player2Score - room.game.player1Score >= 2)) {
+      clearInterval(room.gameLoopInterval);
+	  let winnerId;
+      if (room.game.player1Score > room.game.player2Score) {
+		winnerId = 1;
       }
-      else if (room.game.player2Score > room.game.player1Score &&
-        room.game.player2Score - room.game.player1Score >= 2) {
-        clearInterval(room.gameLoopInterval);
-        if (room.conn && room.conn.socket.readyState === 1) {
-          room.conn.socket.send(JSON.stringify({
-            type: 'game_over',
-            winner: { id: 2 },
-          }));
-          room.conn.socket.close();
-        }
-        delete localRooms[roomId];
+      else if (room.game.player2Score > room.game.player1Score) {
+		winnerId = 2;
       }
+      if (room.conn && room.conn.socket.readyState === 1) {
+        room.conn.socket.send(JSON.stringify({
+          type: 'game_over',
+          winner: { id: winnerId },
+        }));
+        room.conn.socket.close();
+      }
+      delete localRooms[roomId];
     }
   }, FRAME_RATE);
 }
@@ -643,63 +627,40 @@ function startGame(roomId) {
           p.conn.socket.send(JSON.stringify({ type: "game_tick", state: room.game }));
         }
       });
-      if (room.game.player1Score >= 11 || room.game.player2Score >= 11) {
-        if (room.game.player1Score > room.game.player2Score &&
-          room.game.player1Score - room.game.player2Score >= 2) {
-          clearInterval(room.gameLoopInterval);
-          const winner = room.players.find(player => player.paddleNumber === 1);
-          const loser = room.players.find(player => player.paddleNumber === 2);
-          const winnernick = await getNick(winner.id);
-          room.players.forEach(p => {
-            if (p.conn && p.conn.socket.readyState === 1) {
-              p.conn.socket.send(JSON.stringify({
-                type: 'game_over',
-                winner: { id: winner.id , name: winnernick },
-              }));
-            }
-          });
-          const res = await fetch(`http://database:4334/api/updateResult`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ winId: winner.id, lossId: loser.id, game: 'pong' })
-          });
-          if (!res.ok) {
-            const error = await res.json();
-            console.log(`Error updating result: ${error.error || "Unknown error"}`);
-          }
-          room.players.forEach(p => {if (p.conn && p.conn.socket.readyState === 1) {p.conn.socket.close()}});
-          delete rooms[roomId];
+      if ((room.game.player1Score >= 11 && room.game.player1Score - room.game.player2Score >= 2)
+		|| (room.game.player2Score >= 11 && room.game.player2Score - room.game.player1Score >= 2)) {
+        clearInterval(room.gameLoopInterval);
+		let winner, loser;
+        if (room.game.player1Score > room.game.player2Score) {
+          winner = room.players.find(player => player.paddleNumber === 1);
+          loser = room.players.find(player => player.paddleNumber === 2);
         }
-        else if (room.game.player2Score > room.game.player1Score &&
-          room.game.player2Score - room.game.player1Score >= 2) {
-          clearInterval(room.gameLoopInterval);
-          const winner = room.players.find(player => player.paddleNumber === 2);
-          const loser = room.players.find(player => player.paddleNumber === 1);
-          const winnernick = await getNick(winner.id);
-          room.players.forEach(p => {
-            if (p.conn && p.conn.socket.readyState === 1) {
-              p.conn.socket.send(JSON.stringify({
-                type: 'game_over',
-                winner: { id: winner.id, name: winnernick },
-              }));
-            }
-          });
-          const res = await fetch(`http://database:4334/api/updateResult`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ winId: winner.id, lossId: loser.id, game: 'pong' })
-          });
-          if (!res.ok) {
-            const error = await res.json();
-            console.log(`Error updating result: ${error.error || "Unknown error"}`);
-          }
-          room.players.forEach(p => {if (p.conn && p.conn.socket.readyState === 1) {p.conn.socket.close()}});
-          delete rooms[roomId];
+        else if (room.game.player2Score > room.game.player1Score) {
+          winner = room.players.find(player => player.paddleNumber === 2);
+          loser = room.players.find(player => player.paddleNumber === 1);
         }
+        const winnernick = await getNick(winner.id);
+        room.players.forEach(p => {
+          if (p.conn && p.conn.socket.readyState === 1) {
+            p.conn.socket.send(JSON.stringify({
+              type: 'game_over',
+              winner: { id: winner.id, name: winnernick },
+            }));
+          }
+        });
+        const res = await fetch(`http://database:4334/api/updateResult`, {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json'
+          },
+		  body: JSON.stringify({ winId: winner.id, lossId: loser.id, game: 'pong', info: `${room.game.player1Score}-${room.game.player2Score}` })
+        });
+        if (!res.ok) {
+          const error = await res.json();
+          console.log(`Error updating result: ${error.error || "Unknown error"}`);
+        }
+        room.players.forEach(p => {if (p.conn && p.conn.socket.readyState === 1) {p.conn.socket.close()}});
+        delete rooms[roomId];
       }
   }, FRAME_RATE);
 

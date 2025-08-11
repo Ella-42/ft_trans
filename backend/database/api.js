@@ -748,7 +748,6 @@ fastify.post('/api/logout', async (request, reply) => {
 
 
 // **13. Match history**
-
 fastify.get('/api/users/:id/history', { preHandler: verifyToken }, async (request, reply) => {
     try {
         const { id } = request.params;
@@ -814,12 +813,11 @@ fastify.get('/api/users/:id/pong', { preHandler: verifyToken }, async (request, 
 });
 
 // **13.2 Update game history**
-
 const VALID_GAMES = ["pong"];
 
 internalFastify.post('/api/updateResult', async (request, reply) => {
   try {
-    const { winId, lossId, game } = request.body;
+    const { winId, lossId, game, info } = request.body;
     if (!Number.isInteger(winId) || !Number.isInteger(lossId)) {
       throw new Error("Invalid user ID");
     }
@@ -828,7 +826,7 @@ internalFastify.post('/api/updateResult', async (request, reply) => {
     }
     const win = await dbRun(`UPDATE users SET ${game}_wins = ${game}_wins + 1 WHERE id = ?`, [winId]);
     const loss =  await dbRun(`UPDATE users SET ${game}_losses = ${game}_losses + 1 WHERE id = ?`, [lossId]);
-    const history = await dbRun('INSERT INTO matches (game, winner, loser) VALUES (?, ?, ?)', [game, winId, lossId]);
+    const history = await dbRun('INSERT INTO matches (game, winner, loser, info) VALUES (?, ?, ?, ?)', [game, winId, lossId, info]);
     if (!win.changes  || !loss.changes || !history.changes) return reply.status(204).send({ message: 'Some changes are not made' });
     reply.status(200).send({ message: 'User updated successfully' });
   } catch (err) {
