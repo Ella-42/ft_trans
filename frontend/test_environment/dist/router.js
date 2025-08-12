@@ -10,7 +10,7 @@ import { renderProfile, attachUpdateProfileFormListener } from './src/components
 import { renderPlayNow, attachPlayNowPong } from './src/components/PlayNowComponent.js';
 import { renderMatchmaking, attachMatchmakingPong } from './src/components/MatchmakingComponent.js';
 import { renderTournament } from './src/components/TournamentComponent.js';
-import { attachStatsListener } from './src/components/StatsComponent.js';
+import { renderStats, attachStatsListener } from './src/components/StatsComponent.js';
 import { attachFriendsListener } from './src/components/FriendsComponent.js';
 import { attachUserProfileListener, renderUserProfile } from './src/components/UserProfileComponent.js';
 const routes = {
@@ -27,7 +27,7 @@ const dashboardRoutes = {
     "/safe/dashboard/matchmaking": () => renderMatchmaking(),
     "/safe/dashboard/tournament": () => renderTournament(),
     "/safe/dashboard/profile": () => renderProfile(),
-    "/safe/dashboard/stats": () => "",
+    "/safe/dashboard/stats": () => renderStats(),
     "/safe/dashboard/friends": () => "",
     "/safe/dashboard/userprofile": () => "",
 };
