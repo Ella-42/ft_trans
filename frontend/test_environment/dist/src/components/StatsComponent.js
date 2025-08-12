@@ -66,6 +66,12 @@ const getScoreData = (matches) => {
         return { time: match.time, diff };
     });
 };
+const getHorizontalTicks = (total) => {
+    const maxTicks = 10;
+    if (total <= maxTicks)
+        return total;
+    return Math.floor(total / (Math.ceil(total / maxTicks)));
+};
 const drawGraph = (scoreData, elementId) => {
     const canvas = document.getElementById(elementId);
     const ctx = canvas.getContext('2d');
@@ -82,39 +88,43 @@ const drawGraph = (scoreData, elementId) => {
     const padding = 50;
     const xScale = (index) => padding + ((total - 1 - index) / (total - 1)) * (canvas.width - padding * 2);
     const yScale = (diff) => canvas.height - padding - ((Math.abs(diff) - minDiff) / (maxDiff - minDiff)) * (canvas.height - padding * 2);
+    const circle = (x, y) => ctx.arc(x, y, 2, 0, Math.PI * 2);
+    let first = false;
+    let last;
+    const draw = (x, y) => {
+        if (!first) {
+            first = true;
+            circle(x, y);
+        }
+        ctx.lineTo(x, y);
+        last = { x, y };
+    };
+    ctx.lineWidth = 2;
     ctx.strokeStyle = '#16a34a';
     ctx.beginPath();
     scoreData.forEach((point, i) => {
-        if (point.diff > 0) {
-            const x = xScale(i);
-            const y = yScale(point.diff);
-            if (i === 0)
-                ctx.moveTo(x, y);
-            else
-                ctx.lineTo(x, y);
-        }
+        if (point.diff > 0)
+            draw(xScale(i), yScale(point.diff));
     });
+    circle(last.x, last.y);
     ctx.stroke();
+    first = false;
     ctx.strokeStyle = 'red';
     ctx.beginPath();
     scoreData.forEach((point, i) => {
-        if (point.diff < 0) {
-            const x = xScale(i);
-            const y = yScale(point.diff);
-            if (i === 0)
-                ctx.moveTo(x, y);
-            else
-                ctx.lineTo(x, y);
-        }
+        if (point.diff < 0)
+            draw(xScale(i), yScale(point.diff));
     });
+    circle(last.x, last.y);
     ctx.stroke();
-    const tickCount = 9;
+    const verticleTicks = maxDiff - 2;
+    const horizontalTicks = getHorizontalTicks(scoreData.length);
     const tickLength = 5;
     ctx.fillStyle = 'white';
     ctx.strokeStyle = 'white';
     ctx.font = '12px sans-serif';
-    for (let i = 0; i <= tickCount; i++) {
-        const matchIndex = Math.floor(i * (total - 1) / tickCount);
+    for (let i = 0; i <= horizontalTicks; i++) {
+        const matchIndex = Math.floor(i * (total - 1) / horizontalTicks);
         const x = xScale(matchIndex);
         const date = new Date(scoreData[matchIndex].time);
         const label = date.toLocaleDateString('nl-BE', { month: 'short', day: 'numeric' });
@@ -124,8 +134,8 @@ const drawGraph = (scoreData, elementId) => {
         ctx.stroke();
         ctx.fillText(label, x - 15, canvas.height - padding + tickLength + 20);
     }
-    for (let i = 0; i <= tickCount; i++) {
-        const diffVal = minDiff + ((maxDiff - minDiff) / tickCount) * i;
+    for (let i = 0; i <= verticleTicks; i++) {
+        const diffVal = minDiff + ((maxDiff - minDiff) / verticleTicks) * i;
         const y = yScale(diffVal);
         ctx.beginPath();
         ctx.moveTo(padding - tickLength, y);
