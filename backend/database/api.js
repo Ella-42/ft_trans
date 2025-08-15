@@ -835,6 +835,24 @@ internalFastify.post('/api/updateResult', async (request, reply) => {
   }
 });
 
+internalFastify.post('/api/updateTResult', async (request, reply) => {
+    try {
+      const { winId, loserlist, game } = request.body;
+      if (!Number.isInteger(winId) || !Number.isInteger(lossId)) {
+        throw new Error("Invalid user ID");
+      }
+      if (!VALID_GAMES.includes(game)) {
+        throw new Error("Invalid game");
+      }
+      const win = await dbRun(`UPDATE users SET ${game}_tournament_wins = ${game}_tournament_wins + 1 WHERE id = ?`, [winId]);
+      if (!win.changes ) return reply.status(204).send({ message: 'Changes are not made' });
+      reply.status(200).send({ message: 'User updated successfully' });
+    } catch (err) {
+      console.error(err);
+      reply.status(500).send({ error: 'Failed to update user' });
+    }
+  });
+
 fastify.get('/api', async () => `This is the ${domain}'s API`);
 
 fastify.listen({ host: '0.0.0.0', port: 3443 }, err => {

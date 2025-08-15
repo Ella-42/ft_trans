@@ -4,9 +4,12 @@ import Fastify from 'fastify';
 import websocket from '@fastify/websocket';
 import { v4 as uuidv4 } from 'uuid';
 import { Mutex } from 'async-mutex';
-import cookie from '@fastify/cookie';
+import cookie from 'cookie';
+import cookiePlugin from '@fastify/cookie';
 const roomMutex = new Mutex();
 const readyMutex = new Mutex();
+const TournamentMutex = new Mutex();
+const updateTournamentMutex = new Mutex();
 const oripublicKey = process.env.PUBLIC_KEY;
 if (!oripublicKey) {
   throw new Error("Missing PUBLIC_KEY environment variable");
@@ -17,17 +20,19 @@ const publicKey = oripublicKey.replace(/\\n/g, '\n');
 const fastify = Fastify();
 fastify.register(websocket);
 
-await fastify.register(cookie, {
+await fastify.register(cookiePlugin, {
   secret: process.env.COOKIE_SECRET,
   parseOptions: {}
 });
 
 
-const rooms = {}; // format: { roomId: { players: [{ id, conn }], ready: Set, gameStarted: bool, game[{....}], gameLoopInterval } }
+const rooms = {}; // format: { roomId: { players: [{ id, conn, paddleNumber }], ready: Set, gameStarted: bool, game[{....}], gameLoopInterval, gameOver: bool, tournament: bool, tid: int, round: int } }
 
 const localRooms = {}; // format: { roomId: { conn, connected: bool, gameStarted: bool, game[{....}], gameLoopInterval, lastActive: time } }
 
 const aiRooms = {}; // format: { roomId: { conn, connected: bool, gameStarted: bool, game[{....}], gameLoopInterval, lastActive: time, paddle: 1/2 , aiHasStartedMoving: bool, game.aiReactionTime: time } }
+
+const tournaments = {}; //format: { [tRoomId]: { players: [{ id, conn }], numPlayers: int, totalPlayer: int, ready: Set, currentRound: int, tournamentStarted: bool, rounds: [{roundNumber: int, ended: int, startedMatches: int, matches: [{matchId: int, ended: bool, error: bool, winner: int, loser: int}] }] } }
 
 function findRoomByPlayerId(playerId) {
   for (const [roomId, room] of Object.entries(rooms)) {
@@ -178,10 +183,13 @@ fastify.get('/ws', { websocket: true }, async (conn, req) => {
 
       if (type === 'auto_join') {
         await handleAutoJoin(conn, conn.userId);
+      } else if (type === 'tournament') {
+        await handleTournament(conn, conn.userId);
       } else if (type === 'ready') {
         await handleReady(roomId, conn.userId, conn);
       } else if (type === 'move') {
         const room = findRoomByPlayerId(conn.userId);
+        if (!room) return;
         const sender = room.players.find(player => player.conn === conn);
         if (!sender) return;
 
@@ -192,6 +200,13 @@ fastify.get('/ws', { websocket: true }, async (conn, req) => {
         } else if (msg.direction === "down" && paddle.y < GAME_HEIGHT - paddle.height) {
           paddle.y += PADDLE_SPEED;
         }
+      } else if (type === 'waitNextT') {
+        if (!msg.tRoomId) {
+          if (conn?.socket?.readyState === 1) {
+            conn.socket.send(JSON.stringify({ type: 'error', message: 'Invalid request' }));
+          }
+        }
+        await waitNextTournament(conn, conn.userId, msg.tRoomId);
       }
     } catch (err) {
       console.error('Message error:', err);
@@ -301,6 +316,238 @@ function updateGame(game) {
     }
 }
 
+//Tournament Handling
+async function createTournamentMatches(tRoom, players, tRoomId) {
+  await roomMutex.runExclusive(() => {
+      let i = 0;
+      if (!tRoom.rounds[tRoom.currentRound]) {
+        tRoom.rounds[tRoom.currentRound] = {roundNumber: tRoom.currentRound, ended: 0, startedMatches: 0, matches: []};
+      }
+      tRoom.tournamentStarted = true;
+      while (i < players.length) {
+        let matchId = uuidv4();
+        if (!players[i + 1]) {
+          tRoom.rounds[tRoom.currentRound].matches.push({matchId: matchId, ended: true, error: false, winner: players[i].id, loser: 0});
+          tRoom.rounds[tRoom.currentRound].ended += 1;
+        } else {
+          tRoom.rounds[tRoom.currentRound].matches.push({matchId: matchId, ended: false, error: false, winner: 0, loser: 0});
+          rooms[matchId] = { players: [], ready: new Set(), gameStarted: false, game: createGame(), gameOver: false, tournament: true, tid : tRoomId, round: tRoom.currentRound};
+          rooms[matchId].players.push({ id: players[i].id, conn: players[i].conn, paddleNumber: 1 });
+          i++;
+          rooms[matchId].players.push({ id: players[i].id, conn: players[i].conn, paddleNumber: 2 });
+          rooms[matchId].players.forEach(p => {
+            if (p.conn?.socket?.readyState === 1) {
+              p.conn.socket.send(JSON.stringify({ type: 'waiting_t_ready', tRoomId, matchId, paddleNumber: p.paddleNumber }));
+            }
+          });
+        }
+        i++;
+        tRoom.rounds[tRoom.currentRound].startedMatches += 1;
+      }
+  }).catch(err => {
+      console.error('Error in Tournament new match creation:', err);
+  });
+}
+
+async function checkNextRound(tRoomId){
+  await updateTournamentMutex.runExclusive(async () => {
+    let tRoom = tournaments[tRoomId];
+    if (!tRoom) return;
+    let lastRound = tRoom.currentRound;
+    let winnerlist = [];
+
+    if (tRoom.rounds[lastRound].ended === tRoom.rounds[lastRound].startedMatches) {
+      for (const match of tRoom.rounds[lastRound].matches) {
+        const winnerId = match.winner;
+        if (winnerId != 0) {
+          const winnerNick = await getNick(winnerId);
+          winnerlist.push({ id: winnerId, nick: winnerNick });
+        }
+      }
+
+      if (winnerlist.length === 1) {
+        let winnerId = winnerlist[0].id;
+        let winnernick = winnerlist[0].nick;
+        let loserlist = [];
+
+        for (let i = 0; i < tRoom.players.length; i++) {
+          if (tRoom.players[i].id != winnerId) {
+            loserlist.push(tRoom.players[i].id);
+          }
+        }
+        const res = await fetch(`http://database:4334/api/updateTResult`, {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ winId: winnerId, loserlist: loserlist, game: 'pong' })
+        });
+        if (!res.ok) {
+          const error = await res.json();
+          console.log(`Error updating result: ${error.error || "Unknown error"}`);
+        }
+        tRoom.players.forEach(p => {
+          if (p.conn?.socket?.readyState === 1) {
+            p.conn.socket.send(JSON.stringify({ type: 'tournamentOver', winner: { id: winnerId , name: winnernick }}));
+          }
+        });
+        return ;
+      }
+    
+      tRoom.players.forEach(p => {
+        if (p.conn?.socket?.readyState === 1) {
+          p.conn.socket.send(JSON.stringify({ type: 'Roundwinner', winnerlist: winnerlist}));
+        }
+      });
+      let newPlayerList = [];
+      tRoom.rounds[lastRound].matches.forEach(match => {
+        const winnerId = match.winner;
+        const conn = tRoom.players.find(p => p.id === winnerId)?.conn ?? null;
+        newPlayerList.push( { id: winnerId, conn: conn });
+      });
+      tRoom.currentRound++;
+      await createTournamentMatches(tRoom, newPlayerList, tRoomId);
+      let winnerIds = winnerlist.map(w => w.id);
+      let nonWinners = tRoom.players.filter(p => !winnerIds.includes(p.id));
+      nonWinners.forEach(p => {
+        if (p.conn?.socket?.readyState === 1) {
+          p.conn.socket.send(JSON.stringify({ type: 'requestNewWait'}));
+        }
+      });
+    }
+  });
+}
+
+async function waitNextTournament(conn, userId, tRoomId) {
+  let tRoom = tournaments[tRoomId];
+  if (!tRoom) {
+    if (conn?.socket?.readyState === 1) {
+      conn.socket.send(JSON.stringify({ type: 'error', message: 'Tournament room does not exist' }));
+    }
+    return ;
+  }
+  const sender = tRoom.players.find(player => player.conn === conn);
+  if (!sender) {
+    if (conn?.socket?.readyState === 1) {
+    conn.socket.send(JSON.stringify({ type: 'error', message: 'You are not in the specified tournament' }));
+    }
+    return ;
+  }
+  let tUpdateInt = setInterval(async () => {
+    if (!conn || !conn.socket || conn.socket.readyState != 1){
+      clearInterval(tUpdateInt);
+      return;
+    }
+    
+    let tRoom = tournaments[tRoomId];
+    if (!tRoom) {
+      clearInterval(tUpdateInt);
+      return;
+    }
+    
+    // Stop sending updates if the round ended
+    if (tRoom.rounds[tRoom.currentRound].ended >= tRoom.rounds[tRoom.currentRound].startedMatches) {
+      clearInterval(tUpdateInt);
+      return;
+    }
+    
+    let updates = [];
+    for (let match of tRoom.rounds[tRoom.currentRound].matches) {
+      let status;
+      let p1 = null;
+      let p2 = null;
+      let score = null;
+
+      if (rooms[match.matchId]) {
+        let room = rooms[match.matchId];
+        let p1Id = room.players[0]?.id;
+        let p2Id = room.players[1]?.id;
+        p1 = { id: p1Id, name: await getNick(p1Id) };
+        p2 = { id: p2Id, name: await getNick(p2Id) };
+        score = {
+          player1: room.game.player1Score,
+          player2: room.game.player2Score
+        };
+        status = room.gameStarted ? 'in_progress' : 'waiting';
+      } else if (match.ended) {
+        let winnerNick = await getNick(match.winner);
+        let loserNick = await getNick(match.loser);
+        p1 = { id: match.winner, name: winnerNick };
+        p2 = { id: match.loser, name: loserNick };
+        score = {
+          player1: 'Winner',
+          player2: 'Loser'
+        };
+        status = 'finished';
+      } else {
+        status = 'waiting';
+      }
+      
+      updates.push({
+        matchId: match.matchId,
+        status,
+        players: [p1, p2],
+        score
+      });
+    }
+    
+    // Send update to the waiting client
+    conn.socket.send(JSON.stringify({
+      type: 'tournament_status',
+      tRoomId,
+      round: tRoom.currentRound,
+      matches: updates
+    }));
+  
+  }, 10000); // every 10 seconds
+}
+
+async function handleTournament(conn, playerId) {
+  //check for reconnection of disconnected users
+  const existingTournament = Object.keys(tournaments).find(rid =>
+    tournaments[rid].players.find(p => p.id === playerId)
+  );
+  
+  if (existingTournament) {
+    conn.socket.send(JSON.stringify({ type: 'error', message: 'Reconnection handling not yet implemented' }));
+    return;
+  }
+  let tRoomId, tRoom;
+  const playernumber = 4;
+  //find existing non-full room with some players
+  await TournamentMutex.runExclusive(() => {
+    tRoomId = Object.keys(tournaments).find(rid =>
+      tournaments[rid].players.length < playernumber && !tournaments[rid].tournamentStarted && tournaments[rid].totalPlayers === playernumber
+    );
+
+    if (!tRoomId) {
+      tRoomId = uuidv4();
+      tournaments[tRoomId] = { players: [], numPlayers: playernumber, totalPlayers: playernumber, ready: new Set(), currentRound: 1, tournamentStarted: false, rounds: []};
+    }
+
+    tRoom = tournaments[tRoomId];
+    if (tRoom.players.find(p => p.id === playerId) && conn && conn.socket.readyState === 1) {
+      conn.socket.send(JSON.stringify({ type: 'error', message: 'Player already joined active session' }));
+      return;
+    }
+    if (tRoom.players.length >= tRoom.numPlayers && conn && conn.socket.readyState === 1) {
+      conn.socket.send(JSON.stringify({ type: 'error', message: 'Room full' }));
+      return;
+    }
+    tRoom.players.push({ id: playerId, conn });
+    if (conn && conn.socket.readyState === 1) {
+      conn.socket.send(JSON.stringify({ type: 'joinedTRoom', tRoomId }));
+    }
+
+  }).catch(err => {
+    console.error('Error in handleTournament:', err);
+  });
+
+  if (tRoom && tRoom.players.length === tRoom.totalPlayers) {
+    await createTournamentMatches(tRoom, tRoom.players, tRoomId);
+  }
+}
+
 //AI Handling
 
 function updateAi(game, playerPaddle) {
@@ -359,28 +606,32 @@ async function handleAi(conn) {
   let roomId;
   roomId = uuidv4();
   aiRooms[roomId] = { conn: conn, connected: true, gameStarted: false, game: createGame(), lastActive: Date.now() };
-  conn.socket.send(JSON.stringify({ type: 'waiting_ready', roomId }));
+  if (conn && conn.socket.readyState === 1) {
+    conn.socket.send(JSON.stringify({ type: 'waiting_ready', roomId }));
+  }
 }
 
 async function aiReconnect(roomId, conn) {
   const room = aiRooms[roomId];
-  if (!room) {
+  if (!room && conn && conn.socket.readyState === 1) {
     conn.socket.send(JSON.stringify({ type: 'error', message: 'Room not found' }));
     return;
   }
-  if (room.conn) {
+  if (room.conn && conn && conn.socket.readyState === 1) {
     conn.socket.send(JSON.stringify({ type: 'error', message: 'Room has active socket connection' }));
     return ;
   }
   room.conn = conn;
   room.connected = true;
-  conn.socket.send(JSON.stringify({ type: 'reconnected', roomId }));
+  if (conn && conn.socket.readyState === 1) {
+    conn.socket.send(JSON.stringify({ type: 'reconnected', roomId }));
+  }
 }
 
 async function aiStart(roomId, conn, paddle) {
   const room = aiRooms[roomId];
   if (!room || room.gameStarted) return;
-  if (room.conn.socket != conn.socket) {
+  if (room.conn.socket != conn.socket && conn.socket.readyState === 1) {
     conn.socket.send(JSON.stringify({ type: 'error', message: 'Room mismatch' }));
     return ;
   }
@@ -389,7 +640,9 @@ async function aiStart(roomId, conn, paddle) {
   room.gameStarted = true;
   
   console.log(`Starting game in room ${roomId}`);
-  conn.socket.send(JSON.stringify({ type: 'game_start' })); 
+  if (conn && conn.socket.readyState === 1) {
+    conn.socket.send(JSON.stringify({ type: 'game_start' }));
+  }
   room.gameLoopInterval = setInterval(async () => {
     updateGame(room.game);
     updateAi(room.game, paddle);
@@ -451,28 +704,32 @@ async function handleLocal(conn) {
   let roomId;
   roomId = uuidv4();
   localRooms[roomId] = { conn: conn, connected: true, gameStarted: false, game: createGame(), lastActive: Date.now() };
-  conn.socket.send(JSON.stringify({ type: 'waiting_ready', roomId }));
+  if (conn && conn.socket.readyState === 1) {
+    conn.socket.send(JSON.stringify({ type: 'waiting_ready', roomId }));
+  }
 }
 
 async function localReconnect(roomId, conn) {
   const room = localRooms[roomId];
-  if (!room) {
+  if (!room && conn && conn.socket.readyState === 1) {
     conn.socket.send(JSON.stringify({ type: 'error', message: 'Room not found' }));
     return;
   }
-  if (room.conn) {
+  if (room.conn && conn.socket.readyState === 1) {
     conn.socket.send(JSON.stringify({ type: 'error', message: 'Room has active socket connection' }));
     return ;
   }
   room.conn = conn;
   room.connected = true;
-  conn.socket.send(JSON.stringify({ type: 'reconnected', roomId }));
+  if ( conn && conn.socket.readyState === 1) {
+    conn.socket.send(JSON.stringify({ type: 'reconnected', roomId }));
+  }
 }
 
 async function localStart(roomId, conn) {
   const room = localRooms[roomId];
   if (!room || room.gameStarted) return;
-  if (room.conn.socket != conn.socket) {
+  if (room.conn.socket != conn.socket && conn && conn.socket.readyState === 1) {
     conn.socket.send(JSON.stringify({ type: 'error', message: 'Room mismatch' }));
     return ;
   }
@@ -480,7 +737,9 @@ async function localStart(roomId, conn) {
   room.gameStarted = true;
   
   console.log(`Starting game in room ${roomId}`);
-  conn.socket.send(JSON.stringify({ type: 'game_start' })); 
+  if ( conn && conn.socket.readyState === 1) {
+    conn.socket.send(JSON.stringify({ type: 'game_start' })); 
+  }
   room.gameLoopInterval = setInterval(async () => {
     updateGame(room.game);
     if (room.conn && room.conn.socket.readyState === 1) {
@@ -522,12 +781,16 @@ async function handleAutoJoin(conn, playerId) {
     const player = room.players.find(p => p.id === playerId);
     if (player.conn === null) {
       player.conn = conn;
-      player.conn.socket.send(JSON.stringify({ type: 'reconnected', roomId: existingRoomId, paddleNumber: player.paddleNumber }));
+      if ( player.conn && player.conn.socket.readyState === 1 ) {
+        player.conn.socket.send(JSON.stringify({ type: 'reconnected', roomId: existingRoomId, paddleNumber: player.paddleNumber }));
+      }
       return;
     } else {
       try {
-        conn.socket.send(JSON.stringify({ type: 'error', message: 'Player has active game session.' }));
-        conn.socket.close();
+        if ( conn && conn.socket.readyState === 1) {
+          conn.socket.send(JSON.stringify({ type: 'error', message: 'Player has active game session.' }));
+          conn.socket.close();
+        }
       } catch (err) {
         console.error('Failed to close duplicate connection from same user:', err);
       }
@@ -543,17 +806,17 @@ async function handleAutoJoin(conn, playerId) {
 
     if (!roomId) {
       roomId = uuidv4();
-      rooms[roomId] = { players: [], ready: new Set(), gameStarted: false, game: createGame() };
+      rooms[roomId] = { players: [], ready: new Set(), gameStarted: false, game: createGame(), gameOver: false, tournament: false, tid : null };
     }
 
     room = rooms[roomId];
-    if (room.players.find(p => p.id === playerId)) {
+    if (room.players.find(p => p.id === playerId) && conn && conn.socket.readyState === 1) {
       conn.socket.send(JSON.stringify({ type: 'error', message: 'Player already joined' }));
       return;
     }
 
     paddleNumber = room.players.length === 0 ? 1 : 2;
-    if (room.players.length >= 2) {
+    if (room.players.length >= 2 && conn && conn.socket.readyState === 1) {
       conn.socket.send(JSON.stringify({ type: 'error', message: 'Room full' }));
       return;
     }
@@ -562,11 +825,14 @@ async function handleAutoJoin(conn, playerId) {
   }).catch(err => {
     console.error('Error in handleAutoJoin:', err);
   });
-  conn.socket.send(JSON.stringify({ type: 'joined', roomId, paddleNumber }));
-
+  if (conn && conn.socket.readyState === 1) {
+    conn.socket.send(JSON.stringify({ type: 'joined', roomId, paddleNumber }));
+  }
   if (room.players.length === 2) {
     room.players.forEach(p => {
-      p.conn.socket.send(JSON.stringify({ type: 'waiting_ready', roomId }));
+      if (p.conn?.socket?.readyState === 1) {
+        p.conn.socket.send(JSON.stringify({ type: 'waiting_ready', roomId }));
+      }
     });
   }
 }
@@ -627,8 +893,9 @@ function startGame(roomId) {
           p.conn.socket.send(JSON.stringify({ type: "game_tick", state: room.game }));
         }
       });
-      if ((room.game.player1Score >= 11 && room.game.player1Score - room.game.player2Score >= 2)
-		|| (room.game.player2Score >= 11 && room.game.player2Score - room.game.player1Score >= 2)) {
+      if (!room.gameOver && ((room.game.player1Score >= 11 && room.game.player1Score - room.game.player2Score >= 2)
+		|| (room.game.player2Score >= 11 && room.game.player2Score - room.game.player1Score >= 2))) {
+        room.gameOver = true;
         clearInterval(room.gameLoopInterval);
 		let winner, loser;
         if (room.game.player1Score > room.game.player2Score) {
@@ -648,6 +915,21 @@ function startGame(roomId) {
             }));
           }
         });
+        if (room.tournament) {
+          await updateTournamentMutex.runExclusive(() => {
+          tournaments[room.tid].rounds[room.round].ended += 1;
+          tournaments[room.tid].numPlayers -= 1;
+          });
+          const match = tournaments[room.tid].rounds[room.round].matches.find(
+            m => m.matchId === roomId
+          );
+          
+          if (match) {
+            match.winner = winner.id;
+            match.loser = loser.id;
+            match.ended = true;
+          }
+        }
         const res = await fetch(`http://database:4334/api/updateResult`, {
           method: 'POST',
           headers: {
@@ -659,7 +941,11 @@ function startGame(roomId) {
           const error = await res.json();
           console.log(`Error updating result: ${error.error || "Unknown error"}`);
         }
-        room.players.forEach(p => {if (p.conn && p.conn.socket.readyState === 1) {p.conn.socket.close()}});
+        if (room.tournament) {
+          await checkNextRound(room.tid);
+        } else {
+          room.players.forEach(p => {if (p.conn && p.conn.socket.readyState === 1) {p.conn.socket.close()}});
+        }
         delete rooms[roomId];
       }
   }, FRAME_RATE);
@@ -693,7 +979,18 @@ fastify.listen({ port: 3330, host: '0.0.0.0' }, () => {
         if (room.gameLoopInterval) {
           clearInterval(room.gameLoopInterval);
         }
-
+        if (room.tournament === true) {
+          tournaments[room.tid].rounds[room.round].ended += 1;
+          const match = tournaments[room.tid].rounds[room.round].matches.find(
+            m => m.matchId === roomId
+          );
+          if (match) {
+            match.winner = 0;
+            match.loser = 0;
+            match.ended = true;
+            match.error = true;
+          }
+        }
         room.players.forEach(p => {
           try {
             p.conn?.socket?.close();
@@ -701,6 +998,24 @@ fastify.listen({ port: 3330, host: '0.0.0.0' }, () => {
         });
 
         delete rooms[roomId];
+      }
+    }
+
+    for (const [roomId, room] of Object.entries(tournaments)) {
+      const allDisconnected = room.players.every(
+        p => !p.conn || p.conn.socket.readyState !== 1
+      );
+
+      if (allDisconnected) {
+        console.log(`Cleaning up tournament ${roomId} (all players disconnected)`);
+
+        room.players.forEach(p => {
+          try {
+            p.conn?.socket?.close();
+          } catch (_) {}
+        });
+
+        delete tournaments[roomId];
       }
     }
 
