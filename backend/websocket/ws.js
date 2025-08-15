@@ -391,6 +391,7 @@ async function checkNextRound(tRoomId){
             p.conn.socket.send(JSON.stringify({ type: 'tournamentOver', winner: { id: winnerId , name: winnernick }}));
           }
         });
+        delete tournaments[tRoomId];
         return ;
       }
     
