@@ -330,7 +330,7 @@ async function createTournamentMatches(tRoom, players, tRoomId) {
           tRoom.rounds[tRoom.currentRound].matches.push({matchId: matchId, ended: true, error: false, winner: players[i].id, loser: 0});
           tRoom.rounds[tRoom.currentRound].ended += 1;
         } else {
-          tRoom.rounds[tRoom.currentRound].matches.push({matchId: matchId, ended: false, error: false, winner: 0, loser: 0});
+          tRoom.rounds[tRoom.currentRound].matches.push({matchId: matchId, ended: false, error: false, winner: 0, loser: 0, player1Id: players[i].id, player2Id: players[i+1].id});
           rooms[matchId] = { players: [], ready: new Set(), gameStarted: false, game: createGame(), gameOver: false, tournament: true, tid : tRoomId, round: tRoom.currentRound};
           rooms[matchId].players.push({ id: players[i].id, conn: players[i].conn, paddleNumber: 1 });
           i++;
@@ -404,7 +404,7 @@ async function checkNextRound(tRoomId){
       tRoom.rounds[lastRound].matches.forEach(match => {
         const winnerId = match.winner;
         const conn = tRoom.players.find(p => p.id === winnerId)?.conn ?? null;
-        newPlayerList.push( { id: winnerId, conn: conn });
+        newPlayerList.push({ id: winnerId, conn: conn });
       });
       tRoom.currentRound++;
       await createTournamentMatches(tRoom, newPlayerList, tRoomId);
@@ -461,8 +461,8 @@ async function waitNextTournament(conn, userId, tRoomId) {
 
       if (rooms[match.matchId]) {
         let room = rooms[match.matchId];
-        let p1Id = room.players[0]?.id;
-        let p2Id = room.players[1]?.id;
+        let p1Id = match.player1Id;
+        let p2Id = match.player2Id;
         p1 = { id: p1Id, name: await getNick(p1Id) };
         p2 = { id: p2Id, name: await getNick(p2Id) };
         score = {
@@ -471,14 +471,15 @@ async function waitNextTournament(conn, userId, tRoomId) {
         };
         status = room.gameStarted ? 'in_progress' : 'waiting';
       } else if (match.ended) {
-        let winnerNick = await getNick(match.winner);
-        let loserNick = await getNick(match.loser);
-        p1 = { id: match.winner, name: winnerNick };
-        p2 = { id: match.loser, name: loserNick };
-        score = {
-          player1: 'Winner',
-          player2: 'Loser'
-        };
+        let p1Id = match.player1Id;
+        let p2Id = match.player2Id;
+        let p1name = p1Id ? await getNick(p1Id) : 'TBD';
+        let p2name = p2Id ? await getNick(p2Id) : 'TBD';
+        p1 = { id: p1Id, name: p1name };
+        p2 = { id: p2Id, name: p2name };
+        score = match.finalScore
+          ? { player1: match.finalScore.player1, player2: match.finalScore.player2 }
+          : { player1: '?', player2: '?' }
         status = 'finished';
       } else {
         status = 'waiting';
@@ -500,7 +501,7 @@ async function waitNextTournament(conn, userId, tRoomId) {
       matches: updates
     }));
   
-  }, 10000); // every 10 seconds
+  }, 3000); // every 3 seconds
 }
 
 async function handleTournament(conn, playerId) {
@@ -918,8 +919,8 @@ function startGame(roomId) {
         });
         if (room.tournament) {
           await updateTournamentMutex.runExclusive(() => {
-          tournaments[room.tid].rounds[room.round].ended += 1;
-          tournaments[room.tid].numPlayers -= 1;
+            tournaments[room.tid].rounds[room.round].ended += 1;
+            tournaments[room.tid].numPlayers -= 1;
           });
           const match = tournaments[room.tid].rounds[room.round].matches.find(
             m => m.matchId === roomId
@@ -929,6 +930,38 @@ function startGame(roomId) {
             match.winner = winner.id;
             match.loser = loser.id;
             match.ended = true;
+            match.status = 'finished';
+            match.finalScore = {
+              player1: room.game.player1Score,
+              player2: room.game.player2Score,
+            };
+          }
+          const tRoom = tournaments[room.tid];
+          const roundObj = tRoom.rounds[room.round];
+          const updates = [];
+          for (const m of roundObj.matches) {
+            let status = m.status || (m.ended ? 'finished' : 'in_progress');
+            let p1 = m.player1Id ? { id: m.player1Id, name: await getNick(m.player1Id) } : null;
+            let p2 = m.player2Id ? { id: m.player2Id, name: await getNick(m.player2Id) } : null;
+            let score = m.finalScore
+              ? { player1: m.finalScore.player1, player2: m.finalScore.player2 }
+              : { player1: '?', player2: '?' };
+            updates.push({
+              matchId: m.matchId,
+              status,
+              players: [p1, p2],
+              score
+            });
+          }
+          for (const p of tRoom.players) {
+            if (p.conn?.socket?.readyState === 1) {
+              p.conn.socket.send(JSON.stringify({
+                type: 'tournament_status',
+                tRoomId: room.tid,
+                round: tRoom.currentRound,
+                matches: updates
+              }));
+            }
           }
         }
         const res = await fetch(`http://database:4334/api/updateResult`, {
@@ -943,6 +976,17 @@ function startGame(roomId) {
           console.log(`Error updating result: ${error.error || "Unknown error"}`);
         }
         if (room.tournament) {
+          const round = tournaments[room.tid].rounds[room.round];
+          const match = round.matches.find(m => m.matchId === roomId);
+          if (match) {
+            match.winner = winner.id;
+            match.loser = loser.id;
+            match.ended = true;
+            match.finalScore = {
+              player1: room.game.player1Score,
+              player2: room.game.player2Score,
+            };
+          }
           await checkNextRound(room.tid);
         } else {
           room.players.forEach(p => {if (p.conn && p.conn.socket.readyState === 1) {p.conn.socket.close()}});

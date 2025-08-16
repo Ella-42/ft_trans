@@ -9,7 +9,7 @@ import { renderDashboardComponent } from './src/components/DashboardComponent.js
 import { renderProfile, attachUpdateProfileFormListener } from './src/components/ProfileComponent.js';
 import { renderPlayNow, attachPlayNowPong } from './src/components/PlayNowComponent.js';
 import { renderMatchmaking, attachMatchmakingPong } from './src/components/MatchmakingComponent.js';
-import { renderTournament } from './src/components/TournamentComponent.js';
+import { renderTournament, attachTournamentPong } from './src/components/TournamentComponent.js';
 import { renderStats, attachStatsListener } from './src/components/StatsComponent.js';
 import { attachFriendsListener } from './src/components/FriendsComponent.js';
 import { attachUserProfileListener, renderUserProfile } from './src/components/UserProfileComponent.js';
@@ -81,7 +81,7 @@ export const router = async () => {
                         attachMatchmakingPong();
                     }
                     else if (path === "/safe/dashboard/tournament") {
-                        //attachTournamentPong();
+                        attachTournamentPong();
                     }
                     else if (path === "/safe/dashboard/profile") {
                         attachUpdateProfileFormListener();

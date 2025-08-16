@@ -838,7 +838,7 @@ internalFastify.post('/api/updateResult', async (request, reply) => {
 internalFastify.post('/api/updateTResult', async (request, reply) => {
     try {
       const { winId, loserlist, game } = request.body;
-      if (!Number.isInteger(winId) || !Number.isInteger(lossId)) {
+      if (!Number.isInteger(winId)) {
         throw new Error("Invalid user ID");
       }
       if (!VALID_GAMES.includes(game)) {
