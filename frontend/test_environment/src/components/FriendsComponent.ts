@@ -251,8 +251,6 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
 												</div>
 												<div class="flex flex-row gap-6 items-center">
 													${userId !== user.id ? (enrichedFriendsList.some(friend => String(friend.id) === String(user.id)) ? `<p class="text-slate-400 px-2 py-1 text-xs">Already friends</p>` : `<button id="sendFriendRequestButton" class="bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all rounded-md py-1 px-3" friendId=${user.id}>Add friend</button>`) : `<p class="text-slate-400 px-2 py-1 text-xs">You cannot add yourself</p>`} 
-													${userId !== user.id ? `
-													<a href="#" class="text-slate-400 hover:text-white hover:bg-slate-700 px-2 py-1 text-xs">View profile</a>`: ``} 
 												</div>
         										</div>
       										`).join('')}
@@ -315,7 +313,7 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
 														<span class="mt-1 h-2 w-2 rounded-full ${user.ping === 'Online' ? 'bg-green-600' : user.ping === 'Offline' ? 'bg-gray-500' : 'bg-orange-400'}"></span>
 													</div>
 													<button id="deleteFriendButton" class="text-white px-3 py-1 bg-red-400 rounded-md" friendToDeleteId=${user.id}>Delete friend</button> 
-													<a href="#" class="text-slate-400 hover:text-white hover:bg-slate-700 px-2 py-1 text-xs">View profile</a>
+													<a data-link href="/safe/dashboard/profile/${user.id}" class="text-slate-400 hover:text-white hover:bg-slate-700 px-2 py-1 text-xs">View profile</a>
 												</div>
 							 				</div>
 										`).join('')}

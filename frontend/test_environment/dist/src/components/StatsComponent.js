@@ -72,7 +72,7 @@ const getHorizontalTicks = (total) => {
         return total;
     return Math.floor(total / (Math.ceil(total / maxTicks)));
 };
-const drawGraph = (scoreData, elementId) => {
+export const drawGraph = (scoreData, elementId) => {
     const canvas = document.getElementById(elementId);
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -100,22 +100,24 @@ const drawGraph = (scoreData, elementId) => {
         last = { x, y };
     };
     ctx.lineWidth = 2;
-    ctx.strokeStyle = '#16a34a';
-    ctx.beginPath();
-    scoreData.forEach((point, i) => {
-        if (point.diff > 0)
-            draw(xScale(i), yScale(point.diff));
-    });
-    circle(last.x, last.y);
-    ctx.stroke();
-    first = false;
     ctx.strokeStyle = 'red';
     ctx.beginPath();
     scoreData.forEach((point, i) => {
         if (point.diff < 0)
             draw(xScale(i), yScale(point.diff));
     });
-    circle(last.x, last.y);
+    if (last)
+        circle(last.x, last.y);
+    ctx.stroke();
+    first = false;
+    ctx.strokeStyle = '#16a34a';
+    ctx.beginPath();
+    scoreData.forEach((point, i) => {
+        if (point.diff > 0)
+            draw(xScale(i), yScale(point.diff));
+    });
+    if (last)
+        circle(last.x, last.y);
     ctx.stroke();
     const verticleTicks = maxDiff - 2;
     const horizontalTicks = getHorizontalTicks(scoreData.length);

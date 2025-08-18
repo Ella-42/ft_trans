@@ -1,157 +1,102 @@
-import { togglePassword, provideUserFeedback } from '../tools/helper.js';
-import { updateHeaderInNavbar, getCookie } from '../tools/helper.js';
-export const attachUpdateProfileFormListener = async () => {
+import { updateHeaderInNavbar } from '../tools/helper.js';
+import { drawGraph } from './StatsComponent.js';
+let userId;
+export const attachProfileListener = async (id) => {
     updateHeaderInNavbar("Profile");
-    const twoFactorToggle = document.querySelector('#twoFactorToggle');
-    const updateProfileForm = document.querySelector('#updateProfileForm');
-    const showOldPasswordIcon = document.querySelector('.lucide-eye-icon');
-    const showNewPasswordIcon = document.querySelector('.lucide-eye-icon-new');
-    if (showOldPasswordIcon || showNewPasswordIcon) {
-        showOldPasswordIcon.addEventListener('click', () => {
-            togglePassword();
-        });
-        showNewPasswordIcon.addEventListener('click', () => {
-            togglePassword();
-        });
+    if (!id) {
+        const idResponse = await axios.get('https://trans.ella-peeters.me/api/whoami');
+        userId = idResponse.data.id;
     }
-    const response = await axios.get('https://trans.ella-peeters.me/api/whoami');
-    const avatarResponse = await axios.get(`https://trans.ella-peeters.me/api/users/${response.data.id}/avatar`);
-    const avatarLink = avatarResponse.data.avatar;
-    const avatarBlock = document.getElementById('avatarBlock');
-    avatarBlock.innerHTML = `<img src ="${avatarLink}" width="320">`;
-    twoFactorToggle.checked = (await axios.get(`https://trans.ella-peeters.me/api/users/${response.data.id}/2fa`)).data.two_factor;
-    twoFactorToggle.addEventListener('change', async () => {
-        console.log('2FA state toggled');
-        const res = await fetch(`https://trans.ella-peeters.me/api/users/${response.data.id}/2fa`, {
-            method: 'POST',
-            credentials: 'include',
-        });
-        const json = await res.json();
-        if (json.error) {
-            twoFactorToggle.checked = !twoFactorToggle.checked;
-            Swal.fire({
-                title: 'Oops!',
-                text: json.error,
-                icon: 'error'
-            });
-        }
-    });
-    const deleteProfileButton = document.querySelector("#deleteProfileButton");
-    deleteProfileButton.addEventListener('click', async (e) => {
-        if (deleteProfileButton) {
-            if (confirm("Are you sure you want to delete your profile and all your data? This cannot be undone.")) {
-                const token = getCookie('token');
-                try {
-                    const deleteResponse = await axios.delete(`https://trans.ella-peeters.me/api/users/${response.data.id}`, {
-                        headers: {
-                            Authorization: `Bearer ${token}`
-                        }
-                    });
-                    sessionStorage.clear();
-                    window.location.href = '/safe';
-                }
-                catch (error) {
-                    Swal.fire({
-                        title: "Error",
-                        text: "There was an error deleting your account. Try again later!",
-                        icon: "error"
-                    });
-                }
-            }
-        }
-    });
-    const updateProfileButton = document.querySelector('#updateProfileButton');
-    updateProfileButton.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const updateProfileForm = document.querySelector('#updateProfileForm');
-        const formData = new FormData(updateProfileForm);
-        const nameInput = document.querySelector('#name');
-        const emailInput = document.querySelector('#email');
-        const avatarInput = document.querySelector('#avatar_img');
-        const newPasswordInput = document.querySelector('#passwordConfirmation');
-        const oldPasswordInput = document.querySelector('#password');
-        const body = {};
-        if (nameInput?.value)
-            body.name = nameInput.value;
-        if (emailInput?.value)
-            body.email = emailInput.value;
-        if (avatarInput?.value)
-            body.avatar = avatarInput.value;
-        if (newPasswordInput?.value)
-            body.password = newPasswordInput.value;
-        if (oldPasswordInput?.value)
-            body.oldPassword = oldPasswordInput.value;
-        const res = await fetch(`https://trans.ella-peeters.me/api/users/${response.data.id}`, {
-            method: 'PUT',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-        const jsonResponse = await res.json();
-        provideUserFeedback(jsonResponse);
+    else {
+        userId = id;
+    }
+    const user = await (await fetch(`/api/users/${userId}`, { method: 'GET' })).json();
+    if (user.avatar)
+        document.getElementById('avatar').src = user.avatar;
+    document.getElementById('nickname').textContent = user.nickname;
+    const status = (await (await fetch(`/api/users/${userId}/ping`, { method: 'GET' })).json()).message;
+    const statusDot = document.getElementById('statusDot');
+    if (status === 'Online')
+        statusDot.classList.add('bg-green-600');
+    else if (status === 'Offline')
+        statusDot.classList.add('bg-gray-500');
+    else
+        statusDot.classList.add('bg-orange-400');
+    document.getElementById('status').textContent = status;
+    const matches = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/history?limit=1000`);
+    const { totalCount, results: matchHistoryArray } = matches.data;
+    const scoreData = getScoreData(matchHistoryArray);
+    drawGraph(scoreData, 'scoreGraph');
+    const winsAndLossesResponse = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/pong`);
+    const wins = winsAndLossesResponse.data.pong_wins;
+    const losses = winsAndLossesResponse.data.pong_losses;
+    document.getElementById('total').textContent = totalCount;
+    document.getElementById('wins').textContent = wins;
+    document.getElementById('losses').textContent = losses;
+    document.getElementById('ratio').textContent = losses ? (wins / losses).toFixed(2) : '∞';
+};
+const getScoreData = (matches) => {
+    return matches.map(match => {
+        const [score1, score2] = match.info.split('-').map(Number);
+        const winnerScore = score1 > score2 ? score1 : score2;
+        const loserScore = score1 > score2 ? score2 : score1;
+        let diff = winnerScore - loserScore;
+        if (match.winner.id !== userId)
+            diff = -diff;
+        return { time: match.time, diff };
     });
 };
 export const renderProfile = () => {
     return `
-				<div class="px-5 flex flex-col md:flex-col flex-1">
-					<div class="px-10 py-5 rounded-xl my-5 mb-10 bg-gray-900 flex flex-col justify-between ">
-						<div>
-							<h1 class="text-3xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Profile</h1>
-							<p className="text-slate-400">Edit your profile and account settings</p>
-						</div>
-						<p class="text-xl mt-10 mb-4">Settings</p>
-						<p class="mt-10 mb-2">Two-Factor Authentication</p>
-						<div class="flex items-center gap-4 mb-8">
-							<label for="twoFactorToggle" class="text-base">Enable 2FA</label>
-								<label class="relative inline-flex items-center cursor-pointer">
-								<input type="checkbox" id="twoFactorToggle" class="sr-only peer">
-								<div class="w-11 h-6 bg-gray-400 rounded-full peer-checked:bg-purple-600 transition"></div>
-								<div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition peer-checked:translate-x-5"></div>
-							</label>
-						</div>
+    <div class="flex flex-col flex-1 p-6">
+      <div class="bg-gray-900 rounded-xl p-8 space-y-8">
 
-						<p class="text-xl mt-10 mb-4">Update profile</p>
-						<div class="grid grid-cols-1 items-center">
-							<form id="updateProfileForm" class="grid grid-cols-1 md:grid-cols-2 md:gap-3 item-center">
-								<div class="flex items-center flex-col mt-8 pb-8 order-2 md:mt-4 md:pb-4">
-									<div id="avatarBlock">
-									</div>
-									<input class="h-10 rounded px-3 text-black mt-4" type="text" id="avatar_img" placeholder="Link to your new avatar">
+        <div class="flex items-center gap-6 bg-slate-800 p-6 rounded-xl">
+          <div class="w-32 h-32 rounded-md overflow-hidden border border-slate-700">
+            <img id="avatar" src="https://www.pngarts.com/files/10/Default-Profile-Picture-Download-PNG-Image.png" alt="Avatar" class="h-full w-full object-cover">
+          </div>
+          <div class="flex flex-col">
+            <h1 id="nickname" class="text-3xl font-bold text-white truncate max-w-[500px]">Nickname</h1>
+            <div class="flex items-center gap-2 mt-2">
+              <span id="statusDot" class="h-2 w-2 rounded-full"></span>
+              <span id="status" class="text-sm text-gray-400">Offline</span>
+            </div>
+          </div>
+        </div>
 
-								</div>
-        							<div class="grid grid-cols-1 gap-4 mt-9 order-1">
-									<div class="flex flex-col">
-                    								<label for="name" class="text-base mb-2">Nickame</label>
-                    								<input class="h-10 rounded px-3 text-black" type="text" id="name" name="name" placeholder="Your new nickname">
-								</div>
-								<div class="flex flex-col">
-                    							<label for="email" class="text-base">Email</label>
-                    							<input class="h-10 rounded px-3 text-black" type="email" id="email" name="email" placeholder="Your new email">
-								</div>
-								<div class="flex flex-col">
-									<label for="newPassword" class="text-base">New password</label>
-									<div class="flex items-center gap-2">
-									<input class="h-10 rounded px-3 text-black w-11/12" type="password" id="passwordConfirmation" name="passwordConfirmation" placeholder="New password">
-									<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye-icon-new lucide-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
-									</div>
-								</div>
-								<div class="flex flex-col">
-									<label for="oldPassword" class="text-base">Old password</label>
-									<div class="flex items-center gap-2">
-									<input class="h-10 rounded px-3 text-black w-11/12" type="password" id="password" name="oldPassword" placeholder="Old password (required)">
-									<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye-icon lucide-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
-									</div>
-								</div>
-                    
-                    						<button class="h-10 mt-5 rounded-md bg-primary text-white font-medium hover:bg-white hover:text-primary transition" type="submit" id="updateProfileButton">Update profile</button>
-                					</div>
-						</form>
-						<div>
-							<p class="text-xl mt-10 mb-4">Delete profile</p>
-                    						<button class="h-10 px-8 py-4mt-5 rounded-md bg-red-500 border-red-500 text-white font-medium hover:bg-white hover:text-red-500 transition " type="submit" id="deleteProfileButton">Delete profile</button>
-						</div>
-						</div>
-						</div>
-				</div>
-	  `;
+        <div class="flex flex-col items-center text-center">
+          <h2 class="text-lg font-semibold mb-2">Score difference over time</h2>
+          <div class="flex space-x-4">
+            <div class="w-3 h-1 mt-2 bg-green-600 rounded-sm"></div>
+            <span class="text-sm"> Wins</span>
+            <div class="w-3 h-1 mt-2 bg-red-600 rounded-sm"></div>
+            <span class="text-sm"> Losses</span>
+          </div>
+          <canvas id="scoreGraph" width="800" height="400" class="mt-4"></canvas>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="py-4 px-8 bg-slate-800 rounded-md">
+            <h2 class="text-sm font-medium text-slate-300">Total matches</h2>
+            <p id="total" class="text-2xl font-bold text-white"></p>
+            <p class="text-xs text-slate-400">Games played</p>
+          </div>
+          <div class="py-4 px-8 bg-slate-800 rounded-md">
+            <h2 class="text-sm font-medium text-slate-300">Total wins</h2>
+            <p id="wins" class="text-2xl font-bold text-white"></p>
+            <p class="text-xs text-slate-400">Wins</p>
+          </div>
+          <div class="py-4 px-8 bg-slate-800 rounded-md">
+            <h2 class="text-sm font-medium text-slate-300">Total losses</h2>
+            <p id="losses" class="text-2xl font-bold text-white"></p>
+            <p class="text-xs text-slate-400">Losses</p>
+          </div>
+          <div class="py-6 px-8 bg-slate-800 rounded-md">
+            <h2 class="text-sm font-medium text-slate-300">Win/loss ratio</h2>
+            <p id="ratio" class="text-2xl font-bold text-white"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
 };

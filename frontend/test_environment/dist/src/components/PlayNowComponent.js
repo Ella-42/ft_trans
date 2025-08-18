@@ -314,7 +314,7 @@ export const renderPlayNow = () => {
     return `
 				<div class="px-5 flex flex-col md:flex-col flex-1">
 					<div class="px-10 py-5 rounded-xl my-5 mb-10 bg-gray-900 flex justify-between items-center">
-						<p class="font-extralight text-xl" id="username-greeting">Hi, welcome 👋, here you can play Pong against AI or 1v1 against someone playing on the same keyboard.</p>
+						<p class="font-extralight text-xl" id="username-greeting">👋 Welcome, play Pong against AI or 1v1 against someone playing on the same keyboard.</p>
 					</div>
 					<div class="text-center text-purple-300 font-mono">
 						<h1 class="text-2xl mb-4 tracking-widest drop-shadow-[0_0_5px_#8B5CF6]">

@@ -10,14 +10,13 @@ export function renderLoggedInSideBar() {
 					</div>
 				</div>
 				<div class="hidden flex md:flex flex-col pb-5 px-7">
-					<a data-link href="/safe/dashboard" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Dashboard</a>
+					<a data-link href="/safe/dashboard/profile" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Profile</a>
+					<a data-link href="/safe/dashboard/friends" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Friends</a>
 					<a data-link href="/safe/dashboard/play" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Play Now</a>
 					<a data-link href="/safe/dashboard/matchmaking" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Matchmaking</a>
 					<a data-link href="/safe/dashboard/tournament" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Tournament</a>
-					<a data-link href="/safe/dashboard/profile" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Profile</a>
 					<a data-link href="/safe/dashboard/stats" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Stats</a>
-					<a data-link href="/safe/dashboard/friends" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Friends</a>
-					<a data-link href="/safe/dashboard/userprofile" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">User profile</a>
+					<a data-link href="/safe/dashboard/settings" class="text-xl md:text-base py-2 text-white pl-3 hover:text-gray-400 sidebar-link">Settings</a>
 				</div>
 		</nav>
   `;

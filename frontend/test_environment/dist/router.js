@@ -5,14 +5,13 @@ import { renderTermsAndConditions } from "./src/pages/TermsAndConditions.js";
 import { renderLogin, attachLoginFormListener } from "./src/pages/Login.js";
 import { renderRegister, attachRegisterFormListener } from "./src/pages/Register.js";
 import { renderDashboard, attachDashboardListener } from './src/pages/Dashboard.js';
-import { renderDashboardComponent } from './src/components/DashboardComponent.js';
-import { renderProfile, attachUpdateProfileFormListener } from './src/components/ProfileComponent.js';
+import { renderSettings, attachSettingsListener } from './src/components/SettingsComponent.js';
 import { renderPlayNow, attachPlayNowPong } from './src/components/PlayNowComponent.js';
 import { renderMatchmaking, attachMatchmakingPong } from './src/components/MatchmakingComponent.js';
 import { renderTournament, attachTournamentPong } from './src/components/TournamentComponent.js';
 import { renderStats, attachStatsListener } from './src/components/StatsComponent.js';
 import { attachFriendsListener } from './src/components/FriendsComponent.js';
-import { attachUserProfileListener, renderUserProfile } from './src/components/UserProfileComponent.js';
+import { attachProfileListener, renderProfile } from './src/components/ProfileComponent.js';
 const routes = {
     "/safe": renderHomePage,
     "/safe/login": renderLogin,
@@ -22,14 +21,13 @@ const routes = {
     "/safe/register": renderRegister,
 };
 const dashboardRoutes = {
-    "/safe/dashboard": (user) => renderDashboardComponent(user),
+    "/safe/dashboard/profile": () => renderProfile(),
     "/safe/dashboard/play": () => renderPlayNow(),
     "/safe/dashboard/matchmaking": () => renderMatchmaking(),
     "/safe/dashboard/tournament": () => renderTournament(),
-    "/safe/dashboard/profile": () => renderProfile(),
+    "/safe/dashboard/settings": () => renderSettings(),
     "/safe/dashboard/stats": () => renderStats(),
     "/safe/dashboard/friends": () => "",
-    "/safe/dashboard/userprofile": () => "",
 };
 export const navigateTo = (url) => {
     window.pongClean?.();
@@ -61,18 +59,18 @@ export const router = async () => {
                     attachLogoutListener();
                 }
                 attachSideBarActiveLinkListener();
-                // Inject only the inner page
-                const innerContent = dashboardRoutes[path];
-                if (path.startsWith("/safe/dashboard/user/")) {
+                if (path.startsWith("/safe/dashboard/profile/")) {
+                    document.getElementById("dashboard-content").innerHTML = renderProfile();
                     const userIdFromPath = path.split("/").pop();
-                    document.getElementById("dashboard-content").innerHTML = renderUserProfile(userIdFromPath);
-                    attachUserProfileListener();
+                    attachProfileListener(Number(userIdFromPath));
                     return;
                 }
+                // Inject only the inner page
+                const innerContent = dashboardRoutes[path];
                 if (innerContent) {
                     document.getElementById("dashboard-content").innerHTML = innerContent(user);
-                    if (path === "/safe/dashboard") {
-                        //attachDashboardListener();
+                    if (path === "/safe/dashboard/profile") {
+                        attachProfileListener(null);
                     }
                     else if (path === "/safe/dashboard/play") {
                         attachPlayNowPong();
@@ -83,17 +81,14 @@ export const router = async () => {
                     else if (path === "/safe/dashboard/tournament") {
                         attachTournamentPong();
                     }
-                    else if (path === "/safe/dashboard/profile") {
-                        attachUpdateProfileFormListener();
+                    else if (path === "/safe/dashboard/settings") {
+                        attachSettingsListener();
                     }
                     else if (path === "/safe/dashboard/stats") {
                         attachStatsListener();
                     }
                     else if (path === "/safe/dashboard/friends") {
                         attachFriendsListener();
-                    }
-                    else if (path === "/safe/dashboard/userprofile") {
-                        attachUserProfileListener();
                     }
                 }
                 else {
