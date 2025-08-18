@@ -43,6 +43,15 @@ function findRoomByPlayerId(playerId) {
   return null;
 }
 
+function findTRoomByPlayerId(playerId) {
+  for (const [roomId, room] of Object.entries(tournaments)) {
+    if (room.players.some(player => player.id === playerId)) {
+      return room;
+    }
+  }
+  return null;
+}
+
 fastify.get('/ws/local', { websocket: true }, async (conn, req) => {
   conn.socket.on('message', async (message) => {
     try {
@@ -215,12 +224,19 @@ fastify.get('/ws', { websocket: true }, async (conn, req) => {
 
   conn.socket.on('close', () => {
     const room = findRoomByPlayerId(conn.userId);
-    if (!room) return;
-    const player = room.players.find(p => p.id === conn.userId);
-    if (player?.conn?.socket != conn.socket) {
-      return ;
+    const tRoom = findTRoomByPlayerId(conn.userId);
+
+    if (tRoom) {
+      const tPlayer = tournaments[room.tid].players.find(p => p.id === conn.userId);
+      if (tPlayer?.conn?.socket === conn.socket) {
+        tPlayer.conn = null;
+      }
     }
     if (room) {
+      const player = room.players.find(p => p.id === conn.userId);
+      if (player?.conn?.socket != conn.socket) {
+        return ;
+      }
       const otherPlayer = room.players.find(p => p.id !== conn.userId);
       if (room.gameStarted === false) {
         // Notify other player if still connected
@@ -232,10 +248,9 @@ fastify.get('/ws', { websocket: true }, async (conn, req) => {
           otherPlayer.conn.socket.close();
         }
         delete rooms[Object.keys(rooms).find(id => rooms[id] === room)];
-      }
-      else {
-          player.conn = null;
-          console.log(`Player ${conn.userId} disconnected`);
+      } else {
+        player.conn = null;
+        console.log(`Player ${conn.userId} disconnected`);
       }
     }
   });
@@ -510,9 +525,44 @@ async function handleTournament(conn, playerId) {
     tournaments[rid].players.find(p => p.id === playerId)
   );
   
-  if (existingTournament) {
-    conn.socket.send(JSON.stringify({ type: 'error', message: 'Reconnection handling not yet implemented' }));
-    return;
+
+  if ( existingTournament ) {
+    const room = tournaments[existingTournament];
+    const player = room.players.find(p => p.id === playerId);
+    if ( player.conn === null ) {
+      player.conn = conn;
+      if ( player.conn && player.conn.socket.readyState === 1 ) {
+        player.conn.socket.send(JSON.stringify({ type: 'tReconnected', tRoomId: existingTournament }));
+      }
+      if ( room.tournamentStarted ) {
+        for (let match of room.rounds[room.currentRound].matches) {
+          if ( match.matchId && rooms[match.matchId] ) {
+            const mPlayer = rooms[match.matchId].players.find(p => p.id === playerId);
+            if ( mPlayer ) {
+              mPlayer.conn = conn;
+              if ( mPlayer.conn && mPlayer.conn.socket.readyState === 1 ) {
+                mPlayer.conn.socket.send(JSON.stringify({ type: 'reconnected', matchId: match.matchId, paddleNumber: mPlayer.paddleNumber }));
+              }
+              return ;
+            }
+          }
+        }
+        if (player.conn?.socket?.readyState === 1) {
+          player.conn.socket.send(JSON.stringify({ type: 'requestNewWait'}));
+        }
+      }
+      return;
+    } else {
+      try {
+        if ( conn && conn.socket.readyState === 1) {
+          conn.socket.send(JSON.stringify({ type: 'error', message: 'Player has active tournament session.' }));
+          conn.socket.close();
+        }
+      } catch (err) {
+        console.error('Failed to close duplicate connection from same user:', err);
+      }
+      return;
+    }
   }
   let tRoomId, tRoom;
   const playernumber = 4;
@@ -782,6 +832,13 @@ async function handleAutoJoin(conn, playerId) {
     const room = rooms[existingRoomId];
     const player = room.players.find(p => p.id === playerId);
     if (player.conn === null) {
+      if (room.tournament === true) {
+        if ( conn && conn.socket.readyState === 1) {
+          conn.socket.send(JSON.stringify({ type: 'error', message: 'Player has ongoing tournament.' }));
+          conn.socket.close();
+        }
+        return ;
+      }
       player.conn = conn;
       if ( player.conn && player.conn.socket.readyState === 1 ) {
         player.conn.socket.send(JSON.stringify({ type: 'reconnected', roomId: existingRoomId, paddleNumber: player.paddleNumber }));
