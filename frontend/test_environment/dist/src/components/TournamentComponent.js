@@ -257,6 +257,19 @@ export const attachTournamentPong = async () => {
                     statusMsg = `Tournament over! Winner: ${winner.name} (UID: ${winner.id})`;
                 }
                 document.getElementById('status').textContent = statusMsg;
+            } else if (msg.type === 'tReconnected') {
+                tRoomId = msg.tRoomId;
+                document.getElementById('status').textContent = `Reconnected to tournament room: ${tRoomId}, waiting for match...`;
+                renderTournamentScoreboard(tournamentData); 
+            } else if (msg.type === 'reconnected') {
+                paddleNumber = msg.paddleNumber;
+                matchId = msg.matchId;
+                gameOver = false;
+                started = true;
+                if (!keyInt) {
+                    keyInt = setInterval(handleInput, 1000 / 30);
+                }
+                document.getElementById('status').textContent = `Reconnected to match ${msg.matchId}`;
             }
         };
         socket.onclose = () => {
