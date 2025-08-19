@@ -10,6 +10,7 @@ function check_ip(r)
 		process.env.PCLAUS,
 		process.env.PCLAUSMOBILE,
 		process.env.KCHEUNG,
+		process.env.ALESSANDRO,
 	]
 
 	// Check if client's IP is within the whitelist, block if not

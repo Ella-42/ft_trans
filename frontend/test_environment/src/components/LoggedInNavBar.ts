@@ -25,13 +25,10 @@ export function renderLoggedInNavBar(user: User): string {
 					</div>
 				</div>
 				<div class="hidden flex md:flex md:flex-row flex-col items-center justify-start pb-5 md:space-x-5 pb-3 md:pb-0 navigation-menu-logged-in">
-					<a data-link href="/dashboard" class="text-base py-2 text-white hover:pl-3 hover:text-gray-400">Dashboard</a>
-					<a data-link href="/dashboard/play" class="text-base py-2 text-white hover:pl-3 hover:text-gray-400">Play Now</a>
-					<a data-link href="/dashboard/matchmaking" class="text-base py-2 text-white hover:pl-3 hover:text-gray-400">Matchmaking</a>
-					<a data-link href="/dashboard/tournament" class="text-base py-2 text-white hover:pl-3 hover:text-gray-400">Tournament</a>
-					<a data-link href="/dashboard/profile" class="text-base py-2 text-white hover:pl-3 hover:text-gray-400">Profile</a>
-					<a data-link href="/dashboard/stats" class="text-base py-2 text-white hover:pl-3 hover:text-gray-400">Stats</a>
-					<a data-link href="/dashboard/friends" class="text-base py-2 text-white hover:pl-3 hover:text-gray-400">Friends</a>
+					<a data-link href="/safe/dashboard/profile" class="text-base py-2 text-white hover:pl-3 hover:text-gray-400">Profile</a>
+					<a data-link href="/safe/dashboard/friends" class="text-base py-2 text-white hover:pl-3 hover:text-gray-400">Friends</a>
+					<a data-link href="/safe/dashboard/stats" class="text-base py-2 text-white hover:pl-3 hover:text-gray-400">Stats</a>
+					<a data-link href="/safe/dashboard/settings" class="text-base py-2 text-white hover:pl-3 hover:text-gray-400">Settings</a>
 				</div>
 			</div>
 		</nav>

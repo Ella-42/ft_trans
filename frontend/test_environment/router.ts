@@ -138,6 +138,7 @@ window.addEventListener("popstate", router);
 const attachMenuListener = () => {
 	const mobileMenuButton = document.querySelector(".mobile-menu-button");
 	const mobileMenu = document.querySelector(".navigation-menu");
+	if (!mobileMenuButton || !mobileMenu) return;
 
 	mobileMenuButton.addEventListener("click", () => {
 			if (mobileMenu)
@@ -148,6 +149,7 @@ const attachMenuListener = () => {
 const attachLoggedInMenuListener = () => {
 	const mobileMenuButtonLoggedIn = document.querySelector(".mobile-menu-button-logged-in");
 	const mobileMenuLoggedIn = document.querySelector(".navigation-menu-logged-in");
+	if (!mobileMenuButtonLoggedIn || !mobileMenuLoggedIn) return;
 
 	mobileMenuButtonLoggedIn.addEventListener("click", () => {
 			if (mobileMenuLoggedIn)

@@ -38,7 +38,7 @@ export const attachLoginFormListener = () => {
 				}
 			})
 			sessionStorage.setItem('loginSuccess', 'true');
-			navigateTo('/safe/dashboard');
+			navigateTo('/safe/dashboard/profile');
 		} catch (error)
 		{
 			const errorMessage = error?.response?.data?.error || "Something went wrong. Try again later!";
