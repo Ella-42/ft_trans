@@ -6,7 +6,7 @@
 #    By: lpeeters <lpeeters@student.s19.be>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/04 21:07:01 by lpeeters          #+#    #+#              #
-#    Updated: 2025/08/05 17:31:34 by lpeeters         ###   ########.fr        #
+#    Updated: 2025/08/19 15:56:20 by lpeeters         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -36,6 +36,10 @@ down:
 # Check Docker stack status
 status:
 	@docker ps -a $(statusFilter)
+
+# Shell into the Builder Docker container
+builder:
+	@docker exec -it builder sh
 
 # Shell into the Nginx Docker container
 nginx:
@@ -76,7 +80,13 @@ log:
 	&&	echo "\n\nmailserver:\n" \
 	&&	docker logs mailserver \
 	&&	echo "\n\nNginx:\n" \
-	&&	docker logs nginx
+	&&	docker logs nginx \
+	&&	echo "\n\nBuilder:\n" \
+	&&	docker logs builder
+
+# Display logs for the Builder Docker container
+logBuilder:
+	@docker logs builder
 
 # Display logs for the Nginx Docker container
 logNginx:
@@ -102,6 +112,10 @@ logWebsocket:
 re: down clean up
 
 # Restart the Nginx Docker container
+reBuilder:
+	@docker restart builder
+
+# Restart the Nginx Docker container
 reNginx:
 	@docker restart nginx
 
@@ -122,4 +136,4 @@ reWebsocket:
 	@docker restart websocket
 
 # Targets
-.PHONY: up down status nginx authenticator mailserver database websocket clean log logNginx logAuthenticator logMailserver logDatabase logWebsocket re reNginx reAuthenticator reMailserver reDatabase reWebsocket
+.PHONY: up down status builder nginx authenticator mailserver database websocket clean log logBuilder logNginx logAuthenticator logMailserver logDatabase logWebsocket re reBuilder reNginx reAuthenticator reMailserver reDatabase reWebsocket
