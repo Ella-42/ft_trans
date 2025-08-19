@@ -59,7 +59,7 @@ export async function renderLogin(): Promise<string> {
 
 	try {
 		const res = await axios.get('https://trans.ella-peeters.me/api/users/verifytoken', {
-			withCredentials: true // Needed to send cookies
+			withCredentials: true
 		});
 
 		if (res.data.message === "OK") {

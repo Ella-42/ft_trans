@@ -10,6 +10,8 @@ export const attachRegisterFormListener = () => {
 	const registerForm = document.querySelector('#registerForm');
 	const showPasswordIcon = document.querySelector(".lucide-eye-icon");
 	const showPasswordIconConfirmation = document.querySelector(".lucide-eye-icon-confirmation");
+	const registerButton = document.querySelector('button[type="submit"]') as HTMLButtonElement;
+	const termsCheckbox = document.querySelector('input[type="checkbox"]') as HTMLInputElement;
 
 	if (showPasswordIcon || showPasswordIconConfirmation)
 	{
@@ -20,6 +22,29 @@ export const attachRegisterFormListener = () => {
 			togglePassword();
 		});
 	}
+
+	const toggleRegisterButtonState = () => {
+		if (registerButton && termsCheckbox)
+			{
+			const isDisabled = !termsCheckbox.checked;
+			registerButton.disabled = isDisabled;
+
+			if (isDisabled)
+			{
+				registerButton.classList.add('opacity-50', 'cursor-not-allowed');
+			} else {
+				registerButton.classList.remove('opacity-50', 'cursor-not-allowed');
+			}
+		}
+	};
+
+	if (termsCheckbox)
+	{
+		termsCheckbox.addEventListener('change', toggleRegisterButtonState);
+	}
+
+	toggleRegisterButtonState();
+
 	registerForm.addEventListener('submit', async (event) => {
 		event.preventDefault();
 		const registerForm = document.querySelector('#registerForm') as HTMLFormElement;
@@ -28,6 +53,7 @@ export const attachRegisterFormListener = () => {
 		const password = formData.get('password') as string;
 		const passwordConfirmation = formData.get('passwordConfirmation') as string;
 		const nickName = formData.get('nickName') as string;
+		let acceptConditions = false;
 
 		try {
 			const response = await axios.post('https://trans.ella-peeters.me/api/register', {
@@ -39,7 +65,6 @@ export const attachRegisterFormListener = () => {
 					'Content-Type': 'application/json'
 				}
 			})
-			console.log("The response after registering is: ", response);
 			sessionStorage.setItem('registrationSuccess', 'true');
 			navigateTo('/safe/login');
 
@@ -93,6 +118,9 @@ export async function renderRegister(): Promise<string> {
 						<div class="flex items-center gap-2">
 							<input class="h-10 w-11/12 rounded text-black" type="password" id="passwordConfirmation" name="passwordConfirmation">
 							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye-icon-confirmation lucide-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+						</div>
+						<div class="flex flex-row gap-4 mt-4">
+							<input type="checkbox"><p>I have read the <a data-link class="text-primary underline" href="/safe/terms-and-conditions">terms and conditions</a> and agree with them. I also confirm I am at least 16 years old.</p></input>
 						</div>
 						<button class="h-10 w-full mt-10 text-base md:text-base text-white bg-primary my-8 py-3 px-6 rounded-md justify-center flex items-center whitespace-nowrap hover:text-primary hover:bg-white" type="submit">Register</button>
 					</form>

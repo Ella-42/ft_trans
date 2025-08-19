@@ -257,11 +257,13 @@ export const attachTournamentPong = async () => {
                     statusMsg = `Tournament over! Winner: ${winner.name} (UID: ${winner.id})`;
                 }
                 document.getElementById('status').textContent = statusMsg;
-            } else if (msg.type === 'tReconnected') {
+            }
+            else if (msg.type === 'tReconnected') {
                 tRoomId = msg.tRoomId;
                 document.getElementById('status').textContent = `Reconnected to tournament room: ${tRoomId}, waiting for match...`;
-                renderTournamentScoreboard(tournamentData); 
-            } else if (msg.type === 'reconnected') {
+                renderTournamentScoreboard(tournamentData);
+            }
+            else if (msg.type === 'reconnected') {
                 paddleNumber = msg.paddleNumber;
                 matchId = msg.matchId;
                 gameOver = false;

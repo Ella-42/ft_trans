@@ -922,6 +922,10 @@ video {
   flex: 1 1 0%;
 }
 
+.cursor-not-allowed {
+  cursor: not-allowed;
+}
+
 .cursor-pointer {
   cursor: pointer;
 }
@@ -1619,6 +1623,10 @@ video {
 .placeholder-slate-400::placeholder {
   --tw-placeholder-opacity: 1;
   color: rgb(148 163 184 / var(--tw-placeholder-opacity, 1));
+}
+
+.opacity-50 {
+  opacity: 0.5;
 }
 
 .shadow-\[0_0_20px_\#7C3AED\] {

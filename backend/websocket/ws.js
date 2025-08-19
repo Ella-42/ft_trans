@@ -226,7 +226,7 @@ fastify.get('/ws', { websocket: true }, async (conn, req) => {
     const room = findRoomByPlayerId(conn.userId);
     const tRoom = findTRoomByPlayerId(conn.userId);
 
-    if (tRoom) {
+    if (room && tRoom) {
       const tPlayer = tournaments[room.tid].players.find(p => p.id === conn.userId);
       if (tPlayer?.conn?.socket === conn.socket) {
         tPlayer.conn = null;

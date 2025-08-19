@@ -27,7 +27,7 @@ return `
 
 				<section class="space-y-6 text-white">
           				<div>
-						<p>Last updated: July 25, 2025</p>
+						<p>Last updated: August 19, 2025</p>
         					<h2 class="text-2xl font-semibold mb-2">1. Definitions</h2>
             					<p class="pl-3"><strong>Platform/website:</strong> Refers to the web application Retropong.</p>
             					<p class="pl-3"><strong>User:</strong> Any individual who registers and/or uses the services of Retropong.</p>
@@ -53,7 +53,7 @@ return `
               						<li>Email (hashed)</li>
               						<li>Password (hashed)</li>
             					</ul>
-						<p class="pl-3">Username and password are hashed before being saved. This means that we do not keep your password and email as plain text data. The username, email address and password can be changed once the user is logged in.</p>
+						<p class="pl-3">All emails and passwords are hashed before being saved. This means that we do not keep your password and email as plain text data and even we cannot see what they are. The username, email address and password can be changed once the user is logged in.</p>
 
             					<h3 class="text-lg font-medium mt-3">3.2 Account Security</h3>
             					<p class="pl-3">You are responsible for maintaining the confidentiality of your account credentials. Notify us immediately if you suspect unauthorized access to your account.</p>
@@ -98,7 +98,7 @@ return `
             					<h3 class="text-lg font-medium mt-3">5.2 Respectful Behavior</h3>
 		    				<p class="pl-3">Offensive or harassing behavior may result in bans.</p>
             					<h3 class="text-lg font-medium mt-3">5.3 Reporting Misconduct</h3>
-		    				<p class="pl-3">Report violations to <a href="mailto:EllaP.jobs@gmail.com" class="text-primary underline">info@ella-peeters.com</a>.</p>
+							<p class="pl-3">Report violations to <a href="mailto:EllaP.jobs@gmail.com" class="text-primary underline">EllaP.jobs@gmail.com</a>.</p>
           				</div>
 
           				<div>
@@ -116,7 +116,7 @@ return `
           				</div>
 
           				<div>
-            					<h2 class="text-2xl font-semibold mb-2">8. Privacy and Cookies</h2>
+								<h2 class="text-2xl font-semibold mb-2">7. Privacy and Cookies</h2>
             					<p class="pl-3">For data and cookie usage, please see our <a href="https://trans.ella-peeters.me/safe/privacy-policy" class="text-primary underline">Privacy Policy</a> and <a href="https://trans.ella-peeters.me/safe/cookie-policy" class="text-primary underline">Cookie Policy</a>.</p>
           				</div>
         			</section>

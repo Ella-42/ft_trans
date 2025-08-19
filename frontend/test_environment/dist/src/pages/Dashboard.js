@@ -3,7 +3,6 @@ import { renderFooter } from '../components/Footer.js';
 import { renderLoggedInNavBar } from '../components/LoggedInNavBar.js';
 const date = new Date().toLocaleDateString('en-us', { weekday: "long", month: "short", day: "numeric" });
 export const attachDashboardListener = async () => {
-    console.log("The attachDashboardistener runs");
     try {
         const response = await axios.get('https://trans.ella-peeters.me/api/whoami');
         const user = response.data;
