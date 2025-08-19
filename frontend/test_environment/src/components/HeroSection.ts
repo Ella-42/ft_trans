@@ -28,11 +28,10 @@ export function renderHeroSection(): string {
 					</div>
 				</div>
 				<div class="hero-div-right w-full md:w-6/12">
-					<img class="w-full hidden md:flex md:pt-5" src="../safe/public/arcade.svg"></img>
+					<img class="w-full hidden md:flex md:pt-5" src="../safe/public/arcade_machine.png"></img>
 				</div>
 			</div>
 		</div>
     </section>
   `;
 }
-
