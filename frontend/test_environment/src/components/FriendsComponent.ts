@@ -4,20 +4,27 @@ import { navigateTo } from '../../router.js';
 declare const axios: any;
 
 let online;
-const getFriendDetails = async (friendIds: string[]) => {
+const getFriendDetails = async (friendIds: string[], ping: boolean) => {
 	online = 0;
 	const friendDetails = await Promise.all(
 		friendIds.map(async (id) => {
 			try {
         			const res = await axios.get(`https://trans.ella-peeters.me/api/users/${id}`);
-					const response = await fetch(`/api/users/${id}/ping`, { method: 'GET' });
-					const data = await response.json();
-					if (data.message === 'Online') online++;
+					if (ping) {
+						const response = await fetch(`/api/users/${id}/ping`, { method: 'GET' });
+						const data = await response.json();
+						if (data.message === 'Online') online++;
+						return {
+							id,
+							nickname: res.data.nickname,
+							avatar: res.data.avatar,
+							ping: data.message
+						};
+					}
        				return {
        	   				id,
         	  			nickname: res.data.nickname,
-						avatar: res.data.avatar,
-						ping: data.message
+						avatar: res.data.avatar
         			};
       			} catch (err) {
         			console.error(`Failed to fetch details for friend ID ${id}:`, err);
@@ -181,7 +188,7 @@ export const attachFriendsListener = async () => {
 		const friendRequests = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/friends/requests`);
 		const friendRequestsArray = friendRequests.data;
 		const enrichedFriendRequestsArray = await getFriendDetails(friendRequestsArray);
-		const enrichedFriendsList = await getFriendDetails(friendsList);
+		const enrichedFriendsList = await getFriendDetails(friendsList, true);
 
 		let online = 0;
 		enrichedFriendsList.forEach(user => { if (user.ping === 'Online') online++; });
