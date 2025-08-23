@@ -33,6 +33,7 @@ const getFriendDetails = async (friendIds: string[], ping: boolean) => {
     		})
   	);
 	return friendDetails.filter(Boolean);
+	
 }
 
 function attachInputListener(userId: number, userArray: Array<any>, getSearchText: () => string, setSearchText: (val: string) => void, enrichedFriendRequestsArray: Array<any>, enrichedFriendsList: Array<any>) {
@@ -76,7 +77,40 @@ function attachInputListener(userId: number, userArray: Array<any>, getSearchTex
 				attachInputListener(userId, results, getSearchText, setSearchText, enrichedFriendRequestsArray, enrichedFriendsList);
 				attachFriendButtonsListener(userId);
 			}
+			results.forEach(user => {
+				let avatarElement = document.getElementById(`avatar-${user.id}`);
+				let nicknameElement = document.getElementById(`nickname-${user.id}`);
+				if (user.avatar) {
+					avatarElement.setAttribute('src', user.avatar);
+				}
+				if (user.nickname) {
+					nicknameElement.textContent = user.nickname;
+				}
+			})
 		}
+		document.getElementById('length').textContent = enrichedFriendsList.length;
+		enrichedFriendsList.forEach(friend => {
+			let avatarElement = document.getElementById(`avatar-${friend.id}`);
+			let nicknameElement = document.getElementById(`nickname-${friend.id}`);
+			if (friend.avatar) {
+				avatarElement.setAttribute('src', friend.avatar);
+			}
+			if (friend.nickname) {
+				nicknameElement.textContent = friend.nickname;
+			}
+		})
+
+		enrichedFriendRequestsArray.forEach(friendR => {
+			let avatarElement = document.getElementById(`avatar-${friendR.id}`);
+			let nicknameElement = document.getElementById(`nickname-${friendR.id}`);
+			if (friendR.avatar) {
+				avatarElement.setAttribute('src', friendR.avatar);
+			}
+			if (friendR.nickname) {
+				nicknameElement.textContent = friendR.nickname;
+			}
+		})
+
 	});
 }
 
@@ -205,6 +239,31 @@ export const attachFriendsListener = async () => {
 			attachInputListener(userId, userArray, getSearchText, setSearchText, enrichedFriendRequestsArray, enrichedFriendsList);
 			attachFriendButtonsListener(userId);
 		}
+		document.getElementById('length').textContent = enrichedFriendsList.length;
+		document.getElementById('searchInput').setAttribute('value', searchText);
+
+		enrichedFriendsList.forEach(friend => {
+			let avatarElement = document.getElementById(`avatar-${friend.id}`);
+			let nicknameElement = document.getElementById(`nickname-${friend.id}`);
+			if (friend.avatar) {
+				avatarElement.setAttribute('src', friend.avatar);
+			}
+			if (friend.nickname) {
+				nicknameElement.textContent = friend.nickname;
+			}
+		})
+
+		enrichedFriendRequestsArray.forEach(friendR => {
+			let avatarElement = document.getElementById(`avatar-${friendR.id}`);
+			let nicknameElement = document.getElementById(`nickname-${friendR.id}`);
+			if (friendR.avatar) {
+				avatarElement.setAttribute('src', friendR.avatar);
+			}
+			if (friendR.nickname) {
+				nicknameElement.textContent = friendR.nickname;
+			}
+		})
+
 	} catch (error) {
 		console.error("The error is: ", error);
 		const container = document.getElementById("dashboard-content");
@@ -225,7 +284,7 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
 						<div class="grid grid-cols-1 md:grid-cols-2 mt-4 mb-2 gap-4">
 							<div class="py-4 px-8 bg-slate-800 rounded-md border border-slate-700">
 								<h2 class="text-sm font-medium text-slate-300">Total friends</h2>
-								<p class="text-2xl font-bold text-white">${enrichedFriendsList.length}</p>
+								<p id="length" class="text-2xl font-bold text-white"></p>
 								<p class="text-xs text-slate-400">In your network</p>
 							</div>
 							<div class="py-4 px-8 bg-slate-800 rounded-md border border-slate-700">
@@ -239,7 +298,6 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
 							<input
 								id="searchInput"
   								type="text"
-								value="${searchText}"
   								placeholder="Search for a player by typing at least 3 characters of a nickname and press enter..."
   								class="w-full px-4 py-2 bg-slate-600 text-white placeholder-slate-400 placeholder:text-sm rounded-md border border-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
 							/>
@@ -252,9 +310,9 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
         										<div class="flex bg-slate-600 border border-slate-400 rounded-md py-4 px-8 justify-between items-center">
 												<div class="flex flex-row items-center">
 													<div class="w-10 h-10 overflow-hidden">
-														<img src=${user.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.nickname) + '&background=000000&color=ffffff&bold=true'} class="h-full w-full object-cover"/>
+														<img id="avatar-${user.id}" src="https://www.pngarts.com/files/10/Default-Profile-Picture-Download-PNG-Image.png" alt="Avatar" class="h-full w-full object-cover">
 													</div>
-         												<p class="font-semibold text-white text-m ml-3 truncate max-w-[180px]">${user.nickname}</p>
+         												<p id="nickname-${user.id}" class="font-semibold text-white text-m ml-3 truncate max-w-[180px]"></p>
 												</div>
 												<div class="flex flex-row gap-6 items-center">
 													${userId !== user.id ? (enrichedFriendsList.some(friend => String(friend.id) === String(user.id)) ? `<p class="text-slate-400 px-2 py-1 text-xs">Already friends</p>` : `<button id="sendFriendRequestButton" class="bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all rounded-md py-1 px-3" friendId=${user.id}>Add friend</button>`) : `<p class="text-slate-400 px-2 py-1 text-xs">You cannot add yourself</p>`} 
@@ -283,9 +341,9 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
 											<div class="flex bg-slate-600 border border-slate-400 rounded-md py-4 px-8 flex justify-between items-center">
 												<div class="flex flex-row items-center">
 													<div class="w-10 h-10 overflow-hidden">
-														<img src=${user.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(2) + '&background=000000&color=ffffff&bold=true'} class="w-full h-full object-cover"/>
+														<img id="avatar-${user.id}" src="https://www.pngarts.com/files/10/Default-Profile-Picture-Download-PNG-Image.png" alt="Avatar" class="h-full w-full object-cover">
 													</div>
-													<p class="font-semibold text-white text-m ml-3 truncate max-w-[180px]">${user.nickname}</p>
+													<p id="nickname-${user.id}" class="font-semibold text-white text-m ml-3 truncate max-w-[180px]"></p>
 												</div>
 												<div class="flex flex-row gap-6 items-center">
 													<button id="acceptFriendRequestButton" class="bg-green-600 hover:bg-green-700 text-white shadow-lg transition-all rounded-md py-1 px-3" friendRequestId=${user.id}>Accept</button>
@@ -310,9 +368,9 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
 							 				<div class="flex flex-col md:flex-row bg-slate-600 border border-slate-400 rounded-md py-4 gap-4 px-8 justify-between items-center">
 												<div class="flex flex-row items-center">
 													<div class="w-10 h-10 overflow-hidden">
-														<img src=${user.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(2) + '&background=000000&color=ffffff&bold=true'} class="h-full w-full object-cover"></img>
+														<img id="avatar-${user.id}" src="https://www.pngarts.com/files/10/Default-Profile-Picture-Download-PNG-Image.png" alt="Avatar" class="h-full w-full object-cover">
 													</div>
-							  						<p class="font-semibold text-white text-m ml-3 truncate max-w-[200px]">${user.nickname}</p>
+							  						<p id="nickname-${user.id}" class="font-semibold text-white text-m ml-3 truncate max-w-[200px]"></p>
 												</div>
 												<div class="flex flex-row gap-6 items-center">
 													<div class="flex items-center gap-2">
