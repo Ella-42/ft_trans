@@ -24,7 +24,7 @@ export async function renderHomePage(): Promise<string> {
 
   return `
 	  ${renderNavBar(isLoggedIn)}
-	  ${renderHeroSection()}
+	  ${renderHeroSection(isLoggedIn)}
 	  ${renderFeaturesSection()}
 	  ${renderFooter()}
   `;

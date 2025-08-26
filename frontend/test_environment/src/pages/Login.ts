@@ -29,7 +29,7 @@ export const attachLoginFormListener = () => {
 			const response = await axios.post('https://trans.ella-peeters.me/api/login', 
 			{
 				email: String(email),
-				password: String(password),
+				password: String(password)
 			},
 			{
 				headers:
@@ -46,7 +46,7 @@ export const attachLoginFormListener = () => {
 			Swal.fire({
 				title: 'Error!',
 				text: errorMessage,
-				icon: 'error',
+				icon: 'error'
 			});
 		}
 
@@ -76,7 +76,7 @@ export async function renderLogin(): Promise<string> {
 		<div class="container px-5 md:px-10 h-screen flex items-center justify-center">
 			<div class="px-6 flex flex-col items-center bg-primary-background rounded-xl w-96">
 					<h2 class="mb-5 mt-7">Enter your login details</h2>
-					<form class="flex flex-col gap-2 w-72" id="loginForm">
+					<form class="flex flex-col gap-2 w-72" id="loginForm" novalidate>
 						<label for="email" class="text-base">Email</label>
 						<input class="h-10 rounded text-black" type="email" id="email" name="email">
 						<label for="password" class="text-base">Password</label>

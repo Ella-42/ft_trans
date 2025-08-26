@@ -132,7 +132,7 @@ await registerCookie(internalFastify);
 // **Regex***
 
 const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
-const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]{8,}$/;
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d\s])[^\s]{8,}$/;
 const nicknameRegex = /^[\x20-\x7E\u00A0-\u00FF\u0100-\u017F\u0400-\u04FF\u1F00-\u1FFF]+$/;
 
 // **Mail**
@@ -344,7 +344,7 @@ fastify.post('/api/register', async (request, reply) => {
             return reply.status(400).send({ error: 'Invalid email format' });
         }
         if (!passwordRegex.test(password)) {
-			return reply.status(400).send({ error: 'Password must contain at least 1 uppercase and 1 lowercase letter, 1 digit, 1 special character and be at least 8 characters long' });
+			return reply.status(400).send({ error: 'Password must contain at least 1 uppercase and 1 lowercase letter, 1 digit, 1 special character, no whitespaces and be at least 8 characters long' });
         }
         if (!nicknameRegex.test(name)) {
             return reply.status(400).send({ error: 'Nickname can only contain printable characters' });

@@ -55,6 +55,13 @@ export const attachRegisterFormListener = () => {
 		const nickName = formData.get('nickName') as string;
 		let acceptConditions = false;
 
+		if (password !== passwordConfirmation) {
+			return Swal.fire({
+				title: 'Error!',
+				text: 'Passwords do not match',
+				icon: 'error'
+			});
+		}
 		try {
 			const response = await axios.post('https://trans.ella-peeters.me/api/register', {
 				email: String(email),
@@ -75,7 +82,7 @@ export const attachRegisterFormListener = () => {
 			Swal.fire({
 				title: 'Error!',
 				text: errorMessage,
-				icon: 'error',
+				icon: 'error'
 			});
 		}
 
@@ -104,7 +111,7 @@ export async function renderRegister(): Promise<string> {
 		<div class="container px-5 md:px-10 h-screen flex items-center justify-center">
 			<div class="px-6 flex flex-col items-center bg-primary-background rounded-xl w-96">
 					<h2 class="mb-5 mt-7">Register</h2>
-					<form class="flex flex-col gap-2 w-72" id="registerForm" >
+					<form class="flex flex-col gap-2 w-72" id="registerForm" novalidate>
 						<label for="email" class="text-base">Email</label>
 						<input class="h-10 rounded text-black" type="email" id="email" name="email">
 						<label for="nickName" class="text-base">Nickname</label>

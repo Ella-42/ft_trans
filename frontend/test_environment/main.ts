@@ -1,9 +1,9 @@
 import { router, navigateTo } from './router.js';
 
 const ping = async () => {
-	try {
-		await fetch(`/api/users/${(await (await fetch('/api/whoami', { method: 'GET' })).json()).id}/ping`, { method: 'PUT' });
-	} catch { return; }
+	const id = (await (await fetch('/api/whoami', { method: 'GET' })).json()).id;
+	if (id === -1) return;
+	await fetch(`/api/users/${id}/ping`, { method: 'PUT' });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
