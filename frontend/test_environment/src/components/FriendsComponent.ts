@@ -65,7 +65,7 @@ function attachInputListener(userId: number, userArray: Array<any>, getSearchTex
           							</div>
         						`;
       						}
-     						return;
+							return;
 					}
 				} catch (error) {
 					console.error("Search failed:", error);
@@ -78,8 +78,8 @@ function attachInputListener(userId: number, userArray: Array<any>, getSearchTex
 				attachFriendButtonsListener(userId);
 			}
 			results.forEach(user => {
-				let avatarElement = document.getElementById(`avatar-${user.id}`);
-				let nicknameElement = document.getElementById(`nickname-${user.id}`);
+				let avatarElement = document.getElementById(`search-avatar-${user.id}`);
+				let nicknameElement = document.getElementById(`search-nickname-${user.id}`);
 				if (user.avatar) {
 					avatarElement.setAttribute('src', user.avatar);
 				}
@@ -198,9 +198,7 @@ const attachFriendButtonsListener = async (userId: number) => {
 							data : { friendId }
 						});
 						navigateTo("/safe/dashboard/friends");
-					} else {
-						return
-					}
+					} else { return; }
 				} catch (error) {
 					console.log(error);	
 				}
@@ -310,9 +308,9 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
         										<div class="flex bg-slate-600 border border-slate-400 rounded-md py-4 px-8 justify-between items-center">
 												<div class="flex flex-row items-center">
 													<div class="w-10 h-10 overflow-hidden">
-														<img id="avatar-${user.id}" src="https://www.pngarts.com/files/10/Default-Profile-Picture-Download-PNG-Image.png" alt="Avatar" class="h-full w-full object-cover">
+														<img id="search-avatar-${user.id}" src="https://www.pngarts.com/files/10/Default-Profile-Picture-Download-PNG-Image.png" alt="Avatar" class="h-full w-full object-cover">
 													</div>
-         												<p id="nickname-${user.id}" class="font-semibold text-white text-m ml-3 truncate max-w-[180px]"></p>
+														<p id="search-nickname-${user.id}" class="font-semibold text-white text-m ml-3 truncate max-w-[180px]"></p>
 												</div>
 												<div class="flex flex-row gap-6 items-center">
 													${userId !== user.id ? (enrichedFriendsList.some(friend => String(friend.id) === String(user.id)) ? `<p class="text-slate-400 px-2 py-1 text-xs">Already friends</p>` : `<button id="sendFriendRequestButton" class="bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all rounded-md py-1 px-3" friendId=${user.id}>Add friend</button>`) : `<p class="text-slate-400 px-2 py-1 text-xs">You cannot add yourself</p>`} 

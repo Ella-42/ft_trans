@@ -125,11 +125,18 @@ export const router = async () => {
     app.innerHTML = await page;
 
     attachMenuListener();
+    attachLogoutListener();
 
     if (path === "/safe/register")
 	    attachRegisterFormListener();
     if (path === "/safe/login")
 	    attachLoginFormListener();
+
+    const hash = window.location.hash;
+	if (hash) {
+		const element = document.querySelector(hash);
+		if (element) element.scrollIntoView({ behavior: 'smooth' });
+	}
 };
 
 // Handle browser back/forward navigation
@@ -158,17 +165,18 @@ const attachLoggedInMenuListener = () => {
 };
 
 const attachLogoutListener = async () => {
-	const logoutButton = document.querySelector("#logout-btn");
-	logoutButton.addEventListener("click", async () => {
-		try {
-			await axios.post('https://trans.ella-peeters.me/api/logout');
-			navigateTo('/safe');
-		} catch (error)	{
-			console.error("The error is: ", error);
-		}
-	})
+	const logoutButtons = document.querySelectorAll(".logout-btn");
+	logoutButtons.forEach(button => {
+		button.addEventListener("click", async () => {
+			try {
+				await axios.post('https://trans.ella-peeters.me/api/logout');
+				navigateTo('/safe');
+			} catch (error)	{
+				console.error("The error is: ", error);
+			}
+		})
+	});
 }
-
 
 const attachSideBarActiveLinkListener = () => {
 	const links = document.querySelectorAll('.sidebar-link');
