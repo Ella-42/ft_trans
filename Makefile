@@ -6,7 +6,7 @@
 #    By: lpeeters <lpeeters@student.s19.be>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/04 21:07:01 by lpeeters          #+#    #+#              #
-#    Updated: 2025/08/19 15:56:20 by lpeeters         ###   ########.fr        #
+#    Updated: 2025/08/27 21:54:10 by lpeeters         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -73,7 +73,7 @@ clean:
 log:
 	@	echo "database:\n"; \
 		docker logs database \
-	&&	echo "\n\websocket:\n" \
+	&&	echo "\n\nwebsocket:\n" \
 	&&	docker logs websocket \
 	&&	echo "\n\nauthenticator:\n" \
 	&&	docker logs authenticator \
