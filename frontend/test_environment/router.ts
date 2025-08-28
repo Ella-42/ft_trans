@@ -5,7 +5,6 @@ import { renderTermsAndConditions } from "./src/pages/TermsAndConditions.js";
 import { renderLogin, attachLoginFormListener } from "./src/pages/Login.js";
 import { renderRegister, attachRegisterFormListener } from "./src/pages/Register.js";
 import { renderDashboard, attachDashboardListener } from './src/pages/Dashboard.js';
-import { renderDashboardComponent } from './src/components/DashboardComponent.js';
 import { renderSettings, attachSettingsListener } from './src/components/SettingsComponent.js';
 import { renderPlayNow, attachPlayNowPong } from './src/components/PlayNowComponent.js';
 import { renderMatchmaking, attachMatchmakingPong } from './src/components/MatchmakingComponent.js';

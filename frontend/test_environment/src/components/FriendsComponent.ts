@@ -88,7 +88,7 @@ function attachInputListener(userId: number, userArray: Array<any>, getSearchTex
 				}
 			})
 		}
-		document.getElementById('length').textContent = enrichedFriendsList.length;
+		document.getElementById('length').textContent = String(enrichedFriendsList.length);
 		enrichedFriendsList.forEach(friend => {
 			let avatarElement = document.getElementById(`avatar-${friend.id}`);
 			let nicknameElement = document.getElementById(`nickname-${friend.id}`);
@@ -219,7 +219,7 @@ export const attachFriendsListener = async () => {
 		const friendsList = friendsListResponse.data;
 		const friendRequests = await axios.get(`https://trans.ella-peeters.me/api/users/${userId}/friends/requests`);
 		const friendRequestsArray = friendRequests.data;
-		const enrichedFriendRequestsArray = await getFriendDetails(friendRequestsArray);
+		const enrichedFriendRequestsArray = await getFriendDetails(friendRequestsArray, false);
 		const enrichedFriendsList = await getFriendDetails(friendsList, true);
 
 		let online = 0;
@@ -237,7 +237,7 @@ export const attachFriendsListener = async () => {
 			attachInputListener(userId, userArray, getSearchText, setSearchText, enrichedFriendRequestsArray, enrichedFriendsList);
 			attachFriendButtonsListener(userId);
 		}
-		document.getElementById('length').textContent = enrichedFriendsList.length;
+		document.getElementById('length').textContent = String(enrichedFriendsList.length);
 		document.getElementById('searchInput').setAttribute('value', searchText);
 
 		enrichedFriendsList.forEach(friend => {
