@@ -17,22 +17,22 @@ import { attachProfileListener, renderProfile } from './src/components/ProfileCo
 declare const axios: any;
 
 const routes: { [key: string]: () => string | Promise<string> } = {
-	"/safe": renderHomePage,
-	"/safe/login": renderLogin,
-	"/safe/cookie-policy": renderCookiePolicy,
-	"/safe/privacy-policy": renderPrivacyPolicy,
-	"/safe/terms-and-conditions": renderTermsAndConditions,
-	"/safe/register": renderRegister,
+	"/": renderHomePage,
+	"/login": renderLogin,
+	"/cookie-policy": renderCookiePolicy,
+	"/privacy-policy": renderPrivacyPolicy,
+	"/terms-and-conditions": renderTermsAndConditions,
+	"/register": renderRegister,
 };
 
 const dashboardRoutes: { [key: string]: (user: any) => string } = {
-	"/safe/dashboard/profile": () => renderProfile(),
-	"/safe/dashboard/play": () => renderPlayNow(),
-	"/safe/dashboard/matchmaking": () => renderMatchmaking(),
-	"/safe/dashboard/tournament": () => renderTournament(),
-	"/safe/dashboard/settings": () => renderSettings(),
-	"/safe/dashboard/stats": () => renderStats(),
-	"/safe/dashboard/friends": () => "",
+	"/dashboard/profile": () => renderProfile(),
+	"/dashboard/play": () => renderPlayNow(),
+	"/dashboard/matchmaking": () => renderMatchmaking(),
+	"/dashboard/tournament": () => renderTournament(),
+	"/dashboard/settings": () => renderSettings(),
+	"/dashboard/stats": () => renderStats(),
+	"/dashboard/friends": () => "",
 };
 
 export const navigateTo = (url: string) => {
@@ -51,7 +51,7 @@ export const router = async () => {
         return;
     }
 
-    if (path.startsWith("/safe/dashboard")) {
+    if (path.startsWith("/dashboard")) {
 	try {
 		const res = await axios.get('https://trans.ella-peeters.me/api/users/verifytoken', {
 			withCredentials: true
@@ -69,7 +69,7 @@ export const router = async () => {
        			}
 				attachSideBarActiveLinkListener();
 
-				if (path.startsWith("/safe/dashboard/profile/")) {
+				if (path.startsWith("/dashboard/profile/")) {
 					document.getElementById("dashboard-content").innerHTML = renderProfile();
 					const userIdFromPath = path.split("/").pop();
 					attachProfileListener(Number(userIdFromPath));
@@ -79,31 +79,31 @@ export const router = async () => {
         		const innerContent = dashboardRoutes[path];
         		if (innerContent) {
           			document.getElementById("dashboard-content").innerHTML = innerContent(user);
-					if (path === "/safe/dashboard/profile")
+					if (path === "/dashboard/profile")
 					{
 						attachProfileListener(null);
 					}
-					else if (path === "/safe/dashboard/play")
+					else if (path === "/dashboard/play")
 					{
 						attachPlayNowPong();
 					}
-					else if (path === "/safe/dashboard/matchmaking")
+					else if (path === "/dashboard/matchmaking")
 					{
 						attachMatchmakingPong();
 					}
-					else if (path === "/safe/dashboard/tournament")
+					else if (path === "/dashboard/tournament")
 					{
 						attachTournamentPong();
 					}
-					else if (path === "/safe/dashboard/settings")
+					else if (path === "/dashboard/settings")
 					{
 						attachSettingsListener();
 					}
-					else if (path === "/safe/dashboard/stats")
+					else if (path === "/dashboard/stats")
 					{
 						attachStatsListener();
 					}
-					else if (path === "/safe/dashboard/friends")
+					else if (path === "/dashboard/friends")
 					{
 						attachFriendsListener();
 					}
@@ -115,7 +115,7 @@ export const router = async () => {
 
 	} catch (error) {
 		console.error('Token verification failed: ', error);
-		navigateTo('/safe/login');
+		navigateTo('/login');
 		return ;
 	}
     }
@@ -126,9 +126,9 @@ export const router = async () => {
     attachMenuListener();
     attachLogoutListener();
 
-    if (path === "/safe/register")
+    if (path === "/register")
 	    attachRegisterFormListener();
-    if (path === "/safe/login")
+    if (path === "/login")
 	    attachLoginFormListener();
 
     const hash = window.location.hash;
@@ -169,7 +169,7 @@ const attachLogoutListener = async () => {
 		button.addEventListener("click", async () => {
 			try {
 				await axios.post('https://trans.ella-peeters.me/api/logout');
-				navigateTo('/safe');
+				navigateTo('');
 			} catch (error)	{
 				console.error("The error is: ", error);
 			}

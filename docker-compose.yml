@@ -24,12 +24,12 @@ services:
       - /etc/ssl/trans_ella-peeters_me:/etc/ssl/trans_ella-peeters_me:ro #Mount SSL certificate
       - /home/lpeeters/.ssh/ella-peeters.me.key:/etc/ssh/ella-peeters.me.key:ro #Mount SSH key
       - ./backend/webserver/nginx.conf:/etc/nginx/nginx.conf:ro #Mount Nginx configuration
-      - ./backend/webserver/ip_whitelist.js:/etc/nginx/ip_whitelist.js:ro #Mount IP whitelist fetching
-      - dist:/var/www/html/test_environment/dist:ro #Serve JavaScript compiled from TypeScript by Builder container
-      - ./frontend/test_environment/index.html:/var/www/html/test_environment/index.html:ro #Serve entree file
-      - ./frontend/test_environment/favicon.ico:/var/www/html/test_environment/favicon.ico:ro #Serve browser icon
-      - ./frontend/test_environment/public:/var/www/html/test_environment/public:ro #Serve images
-      - ./frontend/production:/var/www/html/production:ro #Placeholder production while testing
+      #- ./backend/webserver/ip_whitelist.js:/etc/nginx/ip_whitelist.js:ro #Mount IP whitelist fetching
+      - dist:/var/www/html/dist:ro #Serve JavaScript compiled from TypeScript by Builder container
+      - ./frontend/production/index.html:/var/www/html/index.html:ro #Serve entree file
+      - ./frontend/production/favicon.ico:/var/www/html/favicon.ico:ro #Serve browser icon
+      - ./frontend/production/public:/var/www/html/public:ro #Serve images
+      #- ./frontend/production:/var/www/html/production:ro #Placeholder production while testing
 
   # Builder for frontend
   builder:
@@ -37,10 +37,10 @@ services:
     build: ./backend/builder
     restart: on-failure:3
     volumes:
-      - ./frontend/test_environment/main.ts:/srv/main.ts:ro #Mount TypeScript files
-      - ./frontend/test_environment/style.css:/srv/style.css:ro #Mount style sheet
-      - ./frontend/test_environment/router.ts:/srv/router.ts:ro #Mount TypeScript files
-      - ./frontend/test_environment/src:/srv/src:ro #Mount TypeScript files
+      - ./frontend/production/main.ts:/srv/main.ts:ro #Mount TypeScript files
+      - ./frontend/production/style.css:/srv/style.css:ro #Mount style sheet
+      - ./frontend/production/router.ts:/srv/router.ts:ro #Mount TypeScript files
+      - ./frontend/production/src:/srv/src:ro #Mount TypeScript files
       - ./backend/builder/package.json:/srv/package.json:ro #Mount NPM configuration
       - ./backend/builder/tsconfig.json:/srv/tsconfig.json:ro #Mount TypeScript compiler configuration
       - ./backend/builder/tailwind.config.cjs:/srv/tailwind.config.cjs:ro #Mount TailwindCSS configuration

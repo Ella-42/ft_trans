@@ -68,13 +68,13 @@ return `
             					<p class="pl-3">Users may not impersonate others or provide false information. We reserve the right to suspend or terminate accounts that violate this rule.</p>
 
             					<h3 class="text-lg font-medium mt-3">3.6 Privacy</h3>
-            					<p class="pl-3">All personal information is handled according to our <a href="https://trans.ella-peeters.me/safe/privacy-policy" class="text-primary underline">Privacy Policy</a>.</p>
+								<p class="pl-3">All personal information is handled according to our <a href="https://trans.ella-peeters.me/privacy-policy" class="text-primary underline">Privacy Policy</a>.</p>
 
             					<h3 class="text-lg font-medium mt-3">3.7 Access</h3>
             					<p class="pl-3">After successful registration, you gain access to platform features such as matchmaking, gameplay, stats, and leaderboards.</p>
 
             					<h3 class="text-lg font-medium mt-3">3.8 Consent</h3>
-            					<p class="pl-3">By registering, you agree to be bound by these Terms of Service, our <a href="https://trans.ella-peeters.me/safe/privacy-policy" class="text-primary underline">Privacy Policy</a>, and all applicable platform rules.</p>
+								<p class="pl-3">By registering, you agree to be bound by these Terms of Service, our <a href="https://trans.ella-peeters.me/privacy-policy" class="text-primary underline">Privacy Policy</a>, and all applicable platform rules.</p>
           				</div>
 
           				<div>
@@ -117,7 +117,7 @@ return `
 
           				<div>
 								<h2 class="text-2xl font-semibold mb-2">7. Privacy and Cookies</h2>
-            					<p class="pl-3">For data and cookie usage, please see our <a href="https://trans.ella-peeters.me/safe/privacy-policy" class="text-primary underline">Privacy Policy</a> and <a href="https://trans.ella-peeters.me/safe/cookie-policy" class="text-primary underline">Cookie Policy</a>.</p>
+								<p class="pl-3">For data and cookie usage, please see our <a href="https://trans.ella-peeters.me/privacy-policy" class="text-primary underline">Privacy Policy</a> and <a href="https://trans.ella-peeters.me/cookie-policy" class="text-primary underline">Cookie Policy</a>.</p>
           				</div>
         			</section>
       			</main>

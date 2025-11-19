@@ -61,7 +61,7 @@ export const attachSettingsListener = async () => {
 						});
 					
 						sessionStorage.clear();
-						window.location.href = '/safe';
+						window.location.href = '/';
 					} catch (error) {
 						Swal.fire({
 							title: "Error",

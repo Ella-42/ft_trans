@@ -150,7 +150,7 @@ const attachFriendButtonsListener = async (userId: number) => {
 							await axios.put(`https://trans.ella-peeters.me/api/users/${userId}/friends`, {
 								friendId 
 							});
-							navigateTo("/safe/dashboard/friends");
+							navigateTo("/dashboard/friends");
 						}
 					}
 					else {
@@ -167,7 +167,7 @@ const attachFriendButtonsListener = async (userId: number) => {
 						await axios.delete(`https://trans.ella-peeters.me/api/users/${userId}/friends/requests`, {
 							data: { friendId }
 						});
-						navigateTo("/safe/dashboard/friends");
+						navigateTo("/dashboard/friends");
 					}
 				} catch (error) {
 					console.log(error);	
@@ -182,7 +182,7 @@ const attachFriendButtonsListener = async (userId: number) => {
 						await axios.put(`https://trans.ella-peeters.me/api/users/${userId}/friends`, {
 							friendId
 						});
-						navigateTo("/safe/dashboard/friends");
+						navigateTo("/dashboard/friends");
 					}
 				} catch (error) {
 					console.log(error);	
@@ -197,7 +197,7 @@ const attachFriendButtonsListener = async (userId: number) => {
 						await axios.delete(`https://trans.ella-peeters.me/api/users/${userId}/friends`, {
 							data : { friendId }
 						});
-						navigateTo("/safe/dashboard/friends");
+						navigateTo("/dashboard/friends");
 					} else { return; }
 				} catch (error) {
 					console.log(error);	
@@ -376,7 +376,7 @@ export const renderFriends = (userArray: Array<{avatar: string, id: number, nick
 														<span class="mt-1 h-2 w-2 rounded-full ${user.ping === 'Online' ? 'bg-green-600' : user.ping === 'Offline' ? 'bg-gray-500' : 'bg-orange-400'}"></span>
 													</div>
 													<button id="deleteFriendButton" class="text-white px-3 py-1 bg-red-400 rounded-md" friendToDeleteId=${user.id}>Delete friend</button> 
-													<a data-link href="/safe/dashboard/profile/${user.id}" class="text-slate-400 hover:text-white hover:bg-slate-700 px-2 py-1 text-xs">View profile</a>
+													<a data-link href="/dashboard/profile/${user.id}" class="text-slate-400 hover:text-white hover:bg-slate-700 px-2 py-1 text-xs">View profile</a>
 												</div>
 							 				</div>
 										`).join('')}

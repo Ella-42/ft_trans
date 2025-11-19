@@ -144,7 +144,7 @@ function handleCallback(request, response)
 			setUserCookie(res, response)
 	)
 
-	.then(() => response.code(302).header('location', 'https://' + process.env.domain + '/safe').send())
+	.then(() => response.code(302).header('location', 'https://' + process.env.domain).send())
 
 	.catch
 	(

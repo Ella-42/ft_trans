@@ -73,7 +73,7 @@ export const attachRegisterFormListener = () => {
 				}
 			})
 			sessionStorage.setItem('registrationSuccess', 'true');
-			navigateTo('/safe/login');
+			navigateTo('/login');
 
 			
 		} catch (error) {
@@ -127,11 +127,11 @@ export async function renderRegister(): Promise<string> {
 							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye-icon-confirmation lucide-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
 						</div>
 						<div class="flex flex-row gap-4 mt-4">
-							<input type="checkbox"><p>I have read the <a data-link class="text-primary underline" href="/safe/terms-and-conditions">terms and conditions</a> and agree with them. I also confirm I am at least 16 years old.</p></input>
+							<input type="checkbox"><p>I have read the <a data-link class="text-primary underline" href="/terms-and-conditions">terms and conditions</a> and agree with them. I also confirm I am at least 16 years old.</p></input>
 						</div>
 						<button class="h-10 w-full mt-10 text-base md:text-base text-white bg-primary my-8 py-3 px-6 rounded-md justify-center flex items-center whitespace-nowrap hover:text-primary hover:bg-white" type="submit">Register</button>
 					</form>
-					<p class="mb-10 text-base" data-link>Already have an account? Click <a class="underline text-primary pointer" href="/safe/login" data-link>here</a> to login</p>
+					<p class="mb-10 text-base" data-link>Already have an account? Click <a class="underline text-primary pointer" href="/login" data-link>here</a> to login</p>
 			</div>
 		</div>
 	  </section>

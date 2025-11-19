@@ -38,7 +38,7 @@ export const attachLoginFormListener = () => {
 				}
 			})
 			sessionStorage.setItem('loginSuccess', 'true');
-			navigateTo('/safe/dashboard/profile');
+			navigateTo('/dashboard/profile');
 		} catch (error)
 		{
 			const errorMessage = error?.response?.data?.error || "Something went wrong. Try again later!";
@@ -88,7 +88,7 @@ export async function renderLogin(): Promise<string> {
 
 						<button class="h-10 w-full mt-1 mb-4 text-base md:text-base text-white bg-primary my-6 py-3 px-6 rounded-md justify-center flex items-center whitespace-nowrap hover:text-primary hover:bg-white" type="button" onclick="window.location.href='/auth';">Login with Google</button>
 					</form>
-					<p class="mb-10 text-base" data-link>Don't have an account? Click <a class="underline text-primary pointer" href="/safe/register" data-link>here</a> to register</p>
+					<p class="mb-10 text-base" data-link>Don't have an account? Click <a class="underline text-primary pointer" href="/register" data-link>here</a> to register</p>
 			</div>
 		</div>
 	  </section>
